@@ -33,8 +33,29 @@ if exist venv rmdir /s /q venv
 python -m venv venv
 call venv\Scripts\activate.bat
 
-echo 📦 Step 1: Installing wheel and build tools (prevents ALL compilation)
+echo 📦 Step 1: CRITICAL - Upgrading pip first (prevents ALL compilation issues)
+echo ⚠️  OLD PIP VERSIONS CAUSE COMPILATION FAILURES!
+echo ✅ Modern pip (20.0+) has excellent wheel support
+
 python -m pip install --upgrade pip
+
+if errorlevel 1 (
+    echo ❌ Standard pip upgrade failed!
+    echo 🔧 Trying alternative pip upgrade method...
+    powershell -Command "& {Invoke-WebRequest -Uri 'https://bootstrap.pypa.io/get-pip.py' -OutFile 'get-pip.py'}"
+    if exist get-pip.py (
+        python get-pip.py
+        del get-pip.py
+        echo ✅ Pip upgraded using get-pip.py
+    ) else (
+        echo ⚠️  Pip upgrade failed - continuing with current version
+    )
+)
+
+echo 📊 Current pip version:
+python -m pip --version
+
+echo 📦 Installing essential build tools...
 python -m pip install wheel setuptools build
 
 echo 🌐 Step 2: Installing core framework...
