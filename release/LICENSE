@@ -1,0 +1,67 @@
+MIT License
+
+Copyright (c) 2024 InLegalDesk Contributors
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+---
+
+## Third-Party Licenses
+
+This software includes components from the following projects:
+
+### AI Models and Libraries:
+- **InLegalBERT**: Apache 2.0 License (law-ai/InLegalBERT)
+- **Transformers**: Apache 2.0 License (Hugging Face)
+- **PyTorch**: BSD-3-Clause License
+- **T5**: Apache 2.0 License (Google Research)
+- **XLNet**: Apache 2.0 License (Google Research)
+
+### Backend Libraries:
+- **FastAPI**: MIT License
+- **Uvicorn**: BSD License
+- **Pydantic**: MIT License
+- **FAISS**: MIT License (Facebook AI Research)
+
+### Desktop Libraries:
+- **PySide6**: LGPL License (Qt for Python)
+- **Qt**: LGPL License
+
+### Security Libraries:
+- **Cryptography**: Apache 2.0 License
+- **python-jose**: MIT License
+
+### Document Processing:
+- **PyMuPDF**: AGPL License
+- **Pillow**: HPND License
+- **OpenCV**: Apache 2.0 License
+
+### Legal Disclaimer:
+This software is for research and educational purposes. Legal advice should 
+always be obtained from qualified legal professionals. The AI-generated content 
+should be reviewed and verified by legal experts before use in any legal proceedings.
+
+The developers and contributors are not responsible for any legal consequences 
+arising from the use of this software. Users are solely responsible for ensuring 
+compliance with applicable laws and regulations.
+
+### Data Privacy:
+This software processes documents locally by default. When OpenAI API features 
+are used, data may be sent to OpenAI's servers according to their privacy policy. 
+Users are responsible for ensuring compliance with applicable data protection laws.
