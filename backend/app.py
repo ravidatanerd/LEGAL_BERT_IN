@@ -21,6 +21,7 @@ from retriever import LegalRetriever
 from llm import LegalLLM
 from sources.indiacode import IndiaCodeDownloader
 from vlm_config import vlm_configurator, VLMQuality, get_vlm_configuration_info
+from ai_adaptive import adaptive_ai, get_ai_status, get_ai_capability_level, estimate_success_rates
 from security import (
     SecurityConfig, InputValidator, SecurityHeadersMiddleware, 
     FileSecurityValidator, SecureEnvironment
@@ -513,6 +514,42 @@ async def get_vlm_recommendations():
         
     except Exception as e:
         logger.error(f"Failed to get VLM recommendations: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/ai/status")
+async def get_ai_status():
+    """Get comprehensive AI system status and success rates"""
+    try:
+        ai_status = get_ai_status()
+        capability_level = get_ai_capability_level()
+        success_rates = estimate_success_rates()
+        
+        return {
+            "ai_system": {
+                "capability_level": capability_level.value,
+                "status_summary": adaptive_ai.get_ai_status_summary(),
+                "success_rates": success_rates
+            },
+            "available_components": ai_status["available_components"],
+            "missing_components": ai_status["missing_components"],
+            "recommendations": ai_status["recommendations"],
+            "performance_estimate": {
+                "overall_success_rate": f"{success_rates['overall']}%",
+                "ai_models_success_rate": f"{max(success_rates['text_generation'], success_rates['embeddings'])}%",
+                "document_processing_success_rate": f"{success_rates['document_processing']}%",
+                "improvement_from_70_percent": f"+{success_rates['overall'] - 70}%" if success_rates['overall'] > 70 else "At baseline"
+            },
+            "feature_availability": {
+                "advanced_ai": capability_level.value in ["full", "high"],
+                "local_models": "transformers" in ai_status["available_components"],
+                "openai_api": "openai" in ai_status["available_components"],
+                "basic_functionality": True,
+                "document_processing": True
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to get AI status: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
