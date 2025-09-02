@@ -10,7 +10,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, File, UploadFile, HTTPException, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, HTMLResponse
 from fastapi.security import HTTPBearer
 from pydantic import BaseModel, Field, field_validator
 import uvicorn
@@ -551,6 +551,282 @@ async def get_ai_status():
     except Exception as e:
         logger.error(f"Failed to get AI status: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/", response_class=HTMLResponse)
+async def root():
+    """Web interface for InLegalDesk"""
+    html_content = """
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>InLegalDesk - Indian Legal Research</title>
+        <style>
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            body { 
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                min-height: 100vh; display: flex; align-items: center; justify-content: center;
+            }
+            .container { 
+                background: white; border-radius: 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+                max-width: 900px; width: 90%; padding: 40px; text-align: center;
+            }
+            .header { margin-bottom: 40px; }
+            .logo { font-size: 48px; margin-bottom: 20px; }
+            .title { font-size: 32px; color: #333; margin-bottom: 10px; font-weight: 700; }
+            .subtitle { font-size: 18px; color: #666; margin-bottom: 30px; }
+            .chat-container { 
+                background: #f8f9fa; border-radius: 15px; padding: 30px; margin-bottom: 30px;
+                min-height: 400px; display: flex; flex-direction: column;
+            }
+            .chat-header { 
+                display: flex; justify-content: between; align-items: center; margin-bottom: 20px;
+                padding: 15px; background: white; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            }
+            .ai-status { color: #007acc; font-weight: bold; font-size: 14px; }
+            .chat-messages { flex: 1; overflow-y: auto; margin-bottom: 20px; }
+            .message { margin-bottom: 15px; display: flex; }
+            .message.user { justify-content: flex-end; }
+            .message.ai { justify-content: flex-start; }
+            .bubble { 
+                max-width: 70%; padding: 15px 20px; border-radius: 20px; 
+                word-wrap: break-word; box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            }
+            .bubble.user { background: #007acc; color: white; }
+            .bubble.ai { background: white; color: #333; border: 1px solid #e0e0e0; }
+            .input-area { 
+                display: flex; gap: 10px; padding: 15px; background: white; 
+                border-radius: 25px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            }
+            .input-text { 
+                flex: 1; border: none; outline: none; font-size: 16px; padding: 10px 15px;
+                border-radius: 20px; background: #f8f9fa;
+            }
+            .send-btn { 
+                background: #007acc; color: white; border: none; border-radius: 50%;
+                width: 45px; height: 45px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+                transition: all 0.3s ease;
+            }
+            .send-btn:hover { background: #005fa3; transform: scale(1.05); }
+            .features { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-top: 30px; }
+            .feature { 
+                background: white; padding: 25px; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+                transition: transform 0.3s ease;
+            }
+            .feature:hover { transform: translateY(-5px); }
+            .feature-icon { font-size: 32px; margin-bottom: 15px; }
+            .feature-title { font-size: 18px; font-weight: bold; color: #333; margin-bottom: 10px; }
+            .feature-desc { color: #666; font-size: 14px; line-height: 1.5; }
+            .status-bar { 
+                display: flex; justify-content: space-between; align-items: center; 
+                padding: 15px; background: #f8f9fa; border-radius: 10px; margin-bottom: 20px; font-size: 14px;
+            }
+            .status-item { display: flex; align-items: center; gap: 8px; }
+            .status-dot { width: 8px; height: 8px; border-radius: 50%; }
+            .status-green { background: #28a745; }
+            .status-blue { background: #007acc; }
+            @media (max-width: 768px) {
+                .container { padding: 20px; }
+                .title { font-size: 24px; }
+                .chat-container { padding: 20px; min-height: 300px; }
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <div class="logo">🏛️⚖️</div>
+                <h1 class="title">InLegalDesk</h1>
+                <p class="subtitle">AI-Powered Indian Legal Research Platform</p>
+            </div>
+            
+            <div class="status-bar">
+                <div class="status-item">
+                    <div class="status-dot status-green"></div>
+                    <span>Backend: Connected</span>
+                </div>
+                <div class="status-item">
+                    <div class="status-dot status-blue"></div>
+                    <span id="ai-status">AI: Hybrid BERT+GPT Ready</span>
+                </div>
+                <div class="status-item">
+                    <div class="status-dot status-green"></div>
+                    <span>VLM: OpenAI Priority</span>
+                </div>
+            </div>
+            
+            <div class="chat-container">
+                <div class="chat-header">
+                    <select id="mode-select" style="padding: 8px; border-radius: 5px; border: 1px solid #ddd;">
+                        <option value="ask">Ask Question</option>
+                        <option value="summarize">Legal Summary</option>
+                        <option value="judgment">Generate Judgment</option>
+                    </select>
+                    <div class="ai-status">🤖 Hybrid BERT+GPT Active</div>
+                </div>
+                
+                <div class="chat-messages" id="chat-messages">
+                    <div class="message ai">
+                        <div class="bubble ai">
+                            👋 Welcome to InLegalDesk! I'm your AI legal research assistant specialized in Indian law. 
+                            <br><br>
+                            You can ask me about:
+                            <br>• IPC sections and criminal law
+                            <br>• Constitutional provisions  
+                            <br>• Case law and precedents
+                            <br>• Legal procedures and documentation
+                            <br><br>
+                            Try asking: "What is Section 302 IPC?" or "Explain bail provisions under CrPC"
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="input-area">
+                    <input type="text" class="input-text" id="user-input" 
+                           placeholder="Ask a legal question or describe case facts..." 
+                           onkeypress="handleKeyPress(event)">
+                    <button class="send-btn" onclick="sendMessage()">➤</button>
+                </div>
+            </div>
+            
+            <div class="features">
+                <div class="feature">
+                    <div class="feature-icon">🤖</div>
+                    <div class="feature-title">Hybrid AI Architecture</div>
+                    <div class="feature-desc">Combines BERT's contextual understanding with GPT's generative capabilities for superior legal analysis</div>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">📄</div>
+                    <div class="feature-title">OCR-Free PDF Processing</div>
+                    <div class="feature-desc">Advanced vision-language models extract text and understand document structure without traditional OCR</div>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">⚖️</div>
+                    <div class="feature-title">Indian Legal Specialization</div>
+                    <div class="feature-desc">Specialized in IPC, CrPC, Constitution, and Indian case law with InLegalBERT embeddings</div>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">🔍</div>
+                    <div class="feature-title">Hybrid Retrieval</div>
+                    <div class="feature-desc">Combines dense vector search with sparse BM25 retrieval for comprehensive legal research</div>
+                </div>
+            </div>
+        </div>
+        
+        <script>
+            let isLoading = false;
+            
+            async function sendMessage() {
+                if (isLoading) return;
+                
+                const input = document.getElementById('user-input');
+                const message = input.value.trim();
+                if (!message) return;
+                
+                const messagesContainer = document.getElementById('chat-messages');
+                
+                // Add user message
+                addMessage(message, true);
+                input.value = '';
+                
+                // Add loading indicator
+                isLoading = true;
+                const loadingDiv = addMessage('🤔 Analyzing your legal question...', false);
+                
+                try {
+                    const mode = document.getElementById('mode-select').value;
+                    const endpoint = mode === 'ask' ? '/ask' : `/${mode}`;
+                    
+                    const requestBody = mode === 'ask' 
+                        ? { question: message, language: 'auto' }
+                        : mode === 'summarize'
+                        ? { document_id: 'latest', language: 'auto' }
+                        : { case_facts: message, legal_issues: ['General Analysis'], language: 'auto' };
+                    
+                    const response = await fetch(endpoint, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(requestBody)
+                    });
+                    
+                    const data = await response.json();
+                    
+                    // Remove loading message
+                    loadingDiv.remove();
+                    
+                    if (response.ok) {
+                        let aiResponse = data.answer || data.summary || data.judgment || 'No response received';
+                        
+                        // Add sources if available
+                        if (data.sources && data.sources.length > 0) {
+                            aiResponse += '<br><br><strong>Sources:</strong><br>';
+                            data.sources.slice(0, 3).forEach((source, i) => {
+                                aiResponse += `[${i+1}] ${source.filename || 'Unknown'} (Score: ${(source.combined_score || 0).toFixed(2)})<br>`;
+                            });
+                        }
+                        
+                        addMessage(aiResponse, false);
+                    } else {
+                        addMessage(`❌ Error: ${data.detail || 'Failed to get response'}`, false);
+                    }
+                } catch (error) {
+                    loadingDiv.remove();
+                    addMessage(`❌ Connection error: ${error.message}`, false);
+                }
+                
+                isLoading = false;
+            }
+            
+            function addMessage(content, isUser) {
+                const messagesContainer = document.getElementById('chat-messages');
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `message ${isUser ? 'user' : 'ai'}`;
+                
+                const bubbleDiv = document.createElement('div');
+                bubbleDiv.className = `bubble ${isUser ? 'user' : 'ai'}`;
+                bubbleDiv.innerHTML = content;
+                
+                messageDiv.appendChild(bubbleDiv);
+                messagesContainer.appendChild(messageDiv);
+                
+                // Scroll to bottom
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                
+                return messageDiv;
+            }
+            
+            function handleKeyPress(event) {
+                if (event.key === 'Enter' && !event.shiftKey) {
+                    event.preventDefault();
+                    sendMessage();
+                }
+            }
+            
+            // Load AI status on page load
+            async function loadAIStatus() {
+                try {
+                    const response = await fetch('/ai/status');
+                    if (response.ok) {
+                        const data = await response.json();
+                        const statusElement = document.getElementById('ai-status');
+                        const capability = data.ai_system.capability_level;
+                        const successRate = data.performance_estimate.overall_success_rate;
+                        statusElement.textContent = `AI: ${capability.toUpperCase()} (${successRate} success)`;
+                    }
+                } catch (error) {
+                    console.log('Could not load AI status:', error);
+                }
+            }
+            
+            // Load status on page load
+            loadAIStatus();
+        </script>
+    </body>
+    </html>
+    """
+    return HTMLResponse(content=html_content)
 
 if __name__ == "__main__":
     port = int(os.getenv("BACKEND_PORT", 8877))
