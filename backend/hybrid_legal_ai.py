@@ -17,6 +17,7 @@ from transformers import (
 import httpx
 
 from utils.textnorm import normalize_text, is_devanagari_text
+from offline_model_loader import model_loader
 
 logger = logging.getLogger(__name__)
 
@@ -40,12 +41,16 @@ class ContextualEncoder:
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
     
     async def initialize(self):
-        """Initialize the contextual encoder"""
+        """Initialize the contextual encoder using offline loader"""
         try:
             logger.info(f"Initializing contextual encoder with {self.model_name}")
             
-            self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
-            self.model = AutoModel.from_pretrained(self.model_name)
+            # Try to load from offline model loader (bundled or cached)
+            self.tokenizer, self.model = model_loader.load_inlegalbert()
+            
+            if self.tokenizer is None or self.model is None:
+                raise Exception("InLegalBERT model not available")
+            
             self.model.to(self.device)
             self.model.eval()
             
@@ -270,23 +275,29 @@ class GenerativeDecoder:
             
             # Initialize T5 for encoder-decoder tasks
             try:
-                t5_model_name = "t5-small"  # Use small model for efficiency
-                self.t5_tokenizer = T5Tokenizer.from_pretrained(t5_model_name)
-                self.t5_model = T5ForConditionalGeneration.from_pretrained(t5_model_name)
-                self.t5_model.to(self.device)
-                self.t5_model.eval()
-                logger.info("T5 encoder-decoder model initialized")
+                logger.info("Loading T5 model...")
+                self.t5_tokenizer, self.t5_model = model_loader.load_t5_model()
+                
+                if self.t5_tokenizer and self.t5_model:
+                    self.t5_model.to(self.device)
+                    self.t5_model.eval()
+                    logger.info("T5 encoder-decoder model initialized")
+                else:
+                    logger.warning("T5 model not available")
             except Exception as e:
                 logger.warning(f"T5 initialization failed: {e}")
             
             # Initialize XLNet for autoregressive+bidirectional tasks
             try:
-                xlnet_model_name = "xlnet-base-cased"
-                self.xlnet_tokenizer = XLNetTokenizer.from_pretrained(xlnet_model_name)
-                self.xlnet_model = XLNetLMHeadModel.from_pretrained(xlnet_model_name)
-                self.xlnet_model.to(self.device)
-                self.xlnet_model.eval()
-                logger.info("XLNet hybrid model initialized")
+                logger.info("Loading XLNet model...")
+                self.xlnet_tokenizer, self.xlnet_model = model_loader.load_xlnet_model()
+                
+                if self.xlnet_tokenizer and self.xlnet_model:
+                    self.xlnet_model.to(self.device)
+                    self.xlnet_model.eval()
+                    logger.info("XLNet hybrid model initialized")
+                else:
+                    logger.warning("XLNet model not available")
             except Exception as e:
                 logger.warning(f"XLNet initialization failed: {e}")
             

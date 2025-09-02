@@ -4,7 +4,8 @@
 param(
     [string]$BuildType = "onedir",  # onefile or onedir
     [string]$PythonPath = "python",
-    [string]$InnoSetupPath = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+    [string]$InnoSetupPath = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe",
+    [switch]$IncludeModels = $false  # Include AI models in installer
 )
 
 Write-Host "Building InLegalDesk Installer..." -ForegroundColor Green
@@ -72,6 +73,24 @@ $requirementsPath = Join-Path $desktopDir "requirements.txt"
 Write-Host "Installing PyInstaller..." -ForegroundColor Blue
 & $venvPip install pyinstaller
 
+# Download AI models for offline installer (if requested)
+if ($IncludeModels) {
+    Write-Host "Preparing AI models for offline installer..." -ForegroundColor Blue
+    Write-Host "This will download ~2GB of AI models..." -ForegroundColor Yellow
+    
+    Push-Location $backendDir
+    & $venvPython model_manager.py
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "❌ Model download failed" -ForegroundColor Red
+        exit 1
+    }
+    Pop-Location
+    
+    Write-Host "✅ AI models prepared for bundling" -ForegroundColor Green
+} else {
+    Write-Host "Skipping AI model bundling (models will download on first run)" -ForegroundColor Yellow
+}
+
 # Build executable
 Write-Host "Building executable with PyInstaller..." -ForegroundColor Blue
 Push-Location $desktopDir
@@ -85,6 +104,12 @@ $pyinstallerArgs = @(
     "--distpath", $distDir
     "--workpath", $buildDir
 )
+
+# Add AI models if requested
+if ($IncludeModels -and (Test-Path "..\installer\models_package")) {
+    $pyinstallerArgs += "--add-data", "..\installer\models_package;models"
+    Write-Host "Including AI models in installer..." -ForegroundColor Green
+}
 
 if ($BuildType -eq "onefile") {
     $pyinstallerArgs += "--onefile"
