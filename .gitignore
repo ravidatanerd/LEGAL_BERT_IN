@@ -176,3 +176,8 @@ sk-*
 *_token_*
 *password*
 *credential*
+
+# Test files with placeholder keys (exclude from public release)
+test_complete_platform.py
+quick_test.py
+simple_test.py

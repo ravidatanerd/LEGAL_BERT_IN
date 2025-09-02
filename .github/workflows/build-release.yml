@@ -1,0 +1,288 @@
+name: Build and Release InLegalDesk
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g., v1.0.0)'
+        required: true
+        default: 'v1.0.0'
+
+env:
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    name: Run Tests
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        
+    - name: Install dependencies
+      run: |
+        cd backend
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        
+    - name: Run security tests
+      run: |
+        cd backend
+        python -c "
+        import sys
+        sys.path.append('.')
+        from security import SecurityConfig, InputValidator
+        
+        # Test security functions
+        assert InputValidator.validate_api_key('sk-' + 'placeholder' + '123456789012345678901234') == True
+        assert InputValidator.validate_api_key('invalid') == False
+        assert InputValidator.validate_filename('test.pdf') == True
+        assert InputValidator.validate_filename('../evil.pdf') == False
+        
+        print('✅ Security tests passed')
+        "
+        
+    - name: Test imports
+      run: |
+        cd backend
+        python -c "
+        import sys
+        sys.path.append('.')
+        import app
+        from hybrid_legal_ai import HybridLegalAI
+        print('✅ All modules import successfully')
+        "
+
+  build-windows:
+    needs: test
+    runs-on: windows-latest
+    name: Build Windows Installer
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        
+    - name: Cache dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~\AppData\Local\pip\Cache
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        
+    - name: Install Inno Setup
+      run: |
+        Write-Host "📦 Installing Inno Setup..."
+        $url = "https://files.jrsoftware.org/is/6/innosetup-6.2.2.exe"
+        Invoke-WebRequest -Uri $url -OutFile "innosetup.exe"
+        Start-Process -FilePath "innosetup.exe" -ArgumentList "/SILENT" -Wait
+        Write-Host "✅ Inno Setup installed"
+        
+    - name: Build desktop application
+      run: |
+        Write-Host "🏗️ Building InLegalDesk desktop application..."
+        
+        cd desktop
+        
+        # Create virtual environment
+        python -m venv venv
+        venv\Scripts\activate
+        
+        # Install dependencies
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pyinstaller
+        
+        # Copy backend files
+        if (Test-Path "server") { Remove-Item -Recurse -Force "server" }
+        Copy-Item -Recurse -Force "..\backend" "server"
+        
+        # Create icon if it doesn't exist
+        if (-not (Test-Path "..\installer\assets\icon.ico")) {
+          New-Item -ItemType Directory -Force -Path "..\installer\assets"
+          # Create a simple placeholder icon file
+          "ICO_PLACEHOLDER" | Out-File "..\installer\assets\icon.ico"
+        }
+        
+        # Build executable
+        pyinstaller --noconfirm --onedir --name InLegalDesk `
+          --add-data "server;server" `
+          --add-data ".env.sample;.env.sample" `
+          --distpath "..\installer\dist" `
+          --workpath "..\installer\build" `
+          main.py
+          
+        Write-Host "✅ Desktop application built successfully"
+        
+    - name: Build installer
+      run: |
+        Write-Host "📦 Building Windows installer..."
+        
+        cd installer
+        
+        # Update ISS script paths
+        $issContent = Get-Content "InLegalDesk.iss" -Raw
+        $issContent = $issContent -replace "#define BuildType .*", "#define BuildType `"onedir`""
+        $issContent = $issContent -replace "#define DistDir .*", "#define DistDir `"dist`""
+        Set-Content "InLegalDesk.iss" $issContent
+        
+        # Build installer
+        & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" "InLegalDesk.iss"
+        
+        # Verify build
+        if (Test-Path "output\InLegalDesk_Installer.exe") {
+          $size = (Get-Item "output\InLegalDesk_Installer.exe").Length / 1MB
+          Write-Host "✅ Installer created: $([math]::Round($size, 1)) MB"
+        } else {
+          Write-Host "❌ Installer build failed"
+          exit 1
+        }
+        
+    - name: Generate checksums
+      run: |
+        Write-Host "🔐 Generating security checksums..."
+        
+        cd installer/output
+        
+        # SHA256 checksum
+        $sha256 = Get-FileHash "InLegalDesk_Installer.exe" -Algorithm SHA256
+        $sha256.Hash | Out-File "InLegalDesk_Installer.exe.sha256" -Encoding ASCII
+        
+        # Create verification script
+        @"
+@echo off
+echo Verifying InLegalDesk installer integrity...
+certutil -hashfile InLegalDesk_Installer.exe SHA256
+echo.
+echo Compare the above hash with the contents of InLegalDesk_Installer.exe.sha256
+echo If they match, the installer is authentic and safe to install.
+pause
+"@ | Out-File "verify_installer.bat" -Encoding ASCII
+        
+        Write-Host "✅ Checksums and verification script created"
+        
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: InLegalDesk-Windows-${{ github.ref_name || github.event.inputs.version }}
+        path: |
+          installer/output/InLegalDesk_Installer.exe
+          installer/output/*.sha256
+          installer/output/verify_installer.bat
+        retention-days: 90
+        
+    - name: Create GitHub Release
+      if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: ${{ github.ref_name || github.event.inputs.version }}
+        name: InLegalDesk ${{ github.ref_name || github.event.inputs.version }} - AI Legal Research Platform
+        body: |
+          # 🤖 InLegalDesk ${{ github.ref_name || github.event.inputs.version }} - AI-Powered Indian Legal Research
+          
+          ## 📥 Download
+          
+          **Windows Installer**: `InLegalDesk_Installer.exe` (~800MB)
+          
+          **System Requirements:**
+          - Windows 10/11 (64-bit)
+          - 8GB RAM (4GB minimum)
+          - 2GB free disk space
+          - Internet connection for AI model downloads
+          
+          ## 🚀 Quick Start
+          
+          1. **Download** the installer below
+          2. **Verify** checksum for security (optional but recommended)
+          3. **Run as Administrator** (right-click → "Run as administrator")
+          4. **Follow** installation wizard
+          5. **Launch** InLegalDesk from Start Menu
+          6. **Configure** OpenAI API key (click "🔑 API Credentials")
+          7. **Start** researching Indian legal questions!
+          
+          ## ✨ Features
+          
+          ### 🤖 **Advanced AI Architecture**
+          - **Hybrid BERT+GPT System**: Combines contextual understanding with generation
+          - **InLegalBERT**: Specialized embeddings for Indian legal text
+          - **Multiple AI Models**: T5, XLNet, OpenAI GPT integration
+          - **Intelligent Strategy Selection**: Optimal model per legal task
+          
+          ### ⚖️ **Legal Research Features**
+          - **AI Question Answering**: Natural language legal queries with citations
+          - **Judgment Generation**: Structured legal judgment drafting
+          - **Document Processing**: OCR-free PDF analysis with vision-language models
+          - **Indian Law Integration**: IPC, CrPC, Evidence Act pre-loaded
+          - **Bilingual Support**: English and Hindi (Devanagari) processing
+          
+          ### 💬 **User Experience**
+          - **ChatGPT-Style Interface**: Familiar chat experience for legal research
+          - **Drag & Drop**: PDF document ingestion
+          - **Streaming Responses**: Real-time response animation
+          - **Enhanced Citations**: Clickable source references with relevance scores
+          - **Export Features**: Save research to Markdown/PDF
+          
+          ### 🔒 **Security & Privacy**
+          - **AES-256 Encryption**: Secure API credential storage
+          - **Local Processing**: Documents processed locally by default
+          - **Input Validation**: Protection against malicious inputs
+          - **Rate Limiting**: Protection against abuse
+          - **No Telemetry**: Your data stays private
+          
+          ## 🔐 Security Verification
+          
+          **Verify installer integrity before installation:**
+          ```cmd
+          # Download verify_installer.bat and run it
+          # Or manually verify:
+          certutil -hashfile InLegalDesk_Installer.exe SHA256
+          # Compare with InLegalDesk_Installer.exe.sha256
+          ```
+          
+          ## 📚 Documentation
+          
+          - **Installation Guide**: See [INSTALLATION.md](https://github.com/${{ github.repository }}/blob/main/INSTALLATION.md)
+          - **User Guide**: See [README.md](https://github.com/${{ github.repository }}/blob/main/README.md)
+          - **Security Guide**: See [SECURITY.md](https://github.com/${{ github.repository }}/blob/main/SECURITY.md)
+          - **Hybrid AI Guide**: See [HYBRID_AI_GUIDE.md](https://github.com/${{ github.repository }}/blob/main/HYBRID_AI_GUIDE.md)
+          
+          ## 🆘 Support
+          
+          - **Issues**: [Report bugs or request features](https://github.com/${{ github.repository }}/issues)
+          - **Discussions**: [Community Q&A](https://github.com/${{ github.repository }}/discussions)
+          - **Documentation**: Comprehensive guides in repository
+          
+          ## ⚠️ Important Notes
+          
+          - **OpenAI API Key Required**: For full AI features (configurable in app)
+          - **First Launch**: Initial model download (~2GB) required
+          - **Internet Required**: For AI model downloads and API calls
+          - **Legal Disclaimer**: For research/educational use - consult legal professionals
+          
+          ## 🎯 What's New in This Release
+          
+          - 🤖 Hybrid BERT+GPT AI architecture implementation
+          - 🧠 Enhanced contextual understanding with InLegalBERT
+          - 🔗 Multi-model fusion (T5 + XLNet + OpenAI integration)
+          - 📊 Advanced legal analysis with confidence scoring
+          - 🔒 Enhanced security with comprehensive protection
+          - 💬 Improved ChatGPT-style interface with hybrid features
+        files: |
+          installer/output/InLegalDesk_Installer.exe
+          installer/output/*.sha256
+          installer/output/verify_installer.bat
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

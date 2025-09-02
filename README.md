@@ -1,26 +1,48 @@
-# InLegalDesk - Indian Legal Research Platform
+# 🤖 InLegalDesk - AI-Powered Indian Legal Research Platform
 
-An AI-powered legal research and judgment drafting platform for Indian law, featuring OCR-free PDF processing, InLegalBERT embeddings, and a ChatGPT-style desktop interface.
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![Platform: Windows](https://img.shields.io/badge/platform-Windows-blue.svg)](https://github.com/YOUR_USERNAME/inlegaldesk/releases)
+[![AI: Hybrid BERT+GPT](https://img.shields.io/badge/AI-Hybrid%20BERT%2BGPT-green.svg)](#hybrid-ai-architecture)
 
-## Features
+An **advanced AI-powered legal research and judgment drafting platform** specifically designed for Indian law, featuring **hybrid BERT+GPT architecture**, OCR-free PDF processing, InLegalBERT embeddings, and a **ChatGPT-style desktop interface**.
+
+## 🎬 **Demo Video**
+*[Add demo video link when available]*
+
+## 📥 **Quick Download**
+**[📦 Download Windows Installer](https://github.com/YOUR_USERNAME/inlegaldesk/releases/latest)** (~800MB)
+
+## ✨ **Key Features**
+
+### 🤖 **Hybrid BERT+GPT AI Architecture**
+- **InLegalBERT**: Specialized contextual understanding for Indian legal text
+- **T5 Encoder-Decoder**: Structured legal document generation
+- **XLNet Hybrid**: Autoregressive + bidirectional processing for complex reasoning
+- **OpenAI GPT**: Enhanced with contextual prompts from BERT analysis
+- **Intelligent Strategy Selection**: Optimal model combination per legal task
+- **Multi-Phase Analysis**: 5-phase hybrid processing pipeline
 
 ### 🔍 **Advanced Document Processing**
-- Vision-Language Model extraction (OCR-free) from PDFs
-- Multiple backends: Donut, Pix2Struct, OpenAI Vision, Tesseract fallback
-- 300 DPI PDF rendering with parallel page processing
-- Confidence scoring and best-of fusion
+- **OCR-Free PDF Extraction**: Vision-language models (Donut, Pix2Struct, OpenAI Vision)
+- **300 DPI Rendering**: High-resolution PDF page processing
+- **Parallel Processing**: Multi-threaded page extraction with confidence scoring
+- **Mixed Script Support**: English and Hindi (Devanagari) text processing
+- **Best-of Fusion**: Multiple extraction backends with quality scoring
 
-### 🧠 **Intelligent Retrieval**
-- **InLegalBERT** embeddings from Hugging Face (`law-ai/InLegalBERT`)
-- Hybrid search: Dense (FAISS) + Sparse (BM25)
-- Mixed Hindi/English script support
-- Unicode normalization and text cleaning
+### 🧠 **Intelligent Legal Analysis**
+- **InLegalBERT Embeddings**: Legal domain embeddings from Hugging Face
+- **Hybrid Retrieval**: Dense (FAISS) + Sparse (BM25) search
+- **Legal Concept Recognition**: Automatic identification of legal concepts
+- **Entity Extraction**: Section references, case citations, act mentions
+- **Contextual Understanding**: Deep analysis of legal text complexity and meaning
 
 ### ⚖️ **Legal AI Features**
-- **Q&A**: Grounded legal question answering with citations
-- **Summarization**: Structured case summaries (Facts, Issues, Arguments, Holding, Relief)
-- **Judgment Generation**: Complete legal judgments with JSON schema
-- **Bilingual Support**: English and Hindi (Devanagari script)
+- **Enhanced Q&A**: Hybrid AI-powered question answering with multi-model analysis
+- **Advanced Judgment Generation**: Structured legal judgments with confidence scoring
+- **Legal Reasoning**: Step-by-step legal analysis and reasoning extraction
+- **Document Summarization**: Structured case summaries with legal insights
+- **Citation Enhancement**: Context-aware source relevance ranking
 
 ### 🖥️ **Desktop Application**
 - **ChatGPT-style Interface**: Modern chat UI with message bubbles
@@ -31,9 +53,41 @@ An AI-powered legal research and judgment drafting platform for Indian law, feat
 - **Export**: Chat transcripts to Markdown/PDF
 
 ### 📦 **Windows Distribution**
-- **Standalone Executable**: PyInstaller-built desktop app
-- **Windows Installer**: Professional Inno Setup installer
-- **No Python Required**: Runs on Windows without Python installation
+- **Standalone Executable**: PyInstaller-built desktop app with all AI models
+- **Professional Installer**: Inno Setup installer with automated builds
+- **No Python Required**: Complete self-contained application
+- **Automated Releases**: GitHub Actions builds installer on new versions
+
+## 🤖 **Hybrid AI Architecture**
+
+InLegalDesk implements a **cutting-edge hybrid BERT+GPT architecture** that combines the strengths of different AI models:
+
+### **Why Hybrid BERT+GPT?**
+- **BERT Excellence**: Deep contextual understanding and legal concept recognition
+- **GPT Excellence**: Sophisticated text generation and creative reasoning
+- **Combined Power**: Leverages complementary strengths for superior legal analysis
+- **Adaptive Strategy**: Intelligent model selection based on task complexity
+
+### **Multi-Model Integration:**
+```
+📊 Legal Query Input
+        ↓
+🧠 InLegalBERT Analysis (Contextual Understanding)
+        ↓
+🤖 Strategy Selection (T5/XLNet/GPT based on complexity)
+        ↓
+💬 Enhanced Generation (Context-aware prompts)
+        ↓
+🔗 Hybrid Fusion (Multi-dimensional scoring)
+        ↓
+⚖️ Enhanced Legal Response
+```
+
+### **Model Combinations:**
+- **InLegalBERT + OpenAI GPT**: Complex legal reasoning with enhanced prompts
+- **InLegalBERT + T5**: Structured legal document generation
+- **InLegalBERT + XLNet**: Advanced statutory interpretation
+- **Multi-Model Ensemble**: Critical analysis with multiple perspectives
 
 ## Quick Start
 
