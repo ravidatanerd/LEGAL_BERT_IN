@@ -1,0 +1,169 @@
+name: Simple InLegalDesk Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_type:
+        description: 'Build type'
+        required: true
+        default: 'source'
+        type: choice
+        options:
+        - source
+        - executable
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Create source distribution
+      run: |
+        echo "📦 Creating source distribution..."
+        
+        # Create clean source package
+        mkdir -p release-package
+        
+        # Copy essential files (exclude build artifacts)
+        cp -r backend release-package/
+        cp -r desktop release-package/
+        cp -r installer release-package/
+        cp *.md release-package/ 2>/dev/null || true
+        cp LICENSE release-package/ 2>/dev/null || true
+        cp build_windows_installer.bat release-package/ 2>/dev/null || true
+        
+        # Clean up any cache files
+        find release-package -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
+        find release-package -name "*.pyc" -delete 2>/dev/null || true
+        find release-package -name ".env" -delete 2>/dev/null || true
+        
+        # Create user instructions
+        cat > release-package/QUICK_START.md << 'EOF'
+# InLegalDesk Quick Start
+        
+## 🚀 Windows Setup
+1. Install Python 3.8+ from python.org
+2. Open Command Prompt as Administrator
+3. Navigate to this folder
+        
+### Backend Setup:
+```cmd
+cd backend
+python -m venv venv
+venv\Scripts\activate
+pip install -r requirements.txt
+copy .env.sample .env
+REM Edit .env and add your OpenAI API key
+python app.py
+```
+        
+### Desktop Setup (new Command Prompt):
+```cmd
+cd desktop
+python -m venv venv
+venv\Scripts\activate
+pip install -r requirements.txt
+xcopy /E /I ..\backend server
+python main.py
+```
+        
+## 🛠️ Build Installer:
+```cmd
+build_windows_installer.bat
+```
+        
+## 📞 Support:
+- Repository: https://github.com/ravidatanerd/LEGAL_BERT_IN
+- Issues: https://github.com/ravidatanerd/LEGAL_BERT_IN/issues
+EOF
+        
+        # Create ZIP package
+        cd release-package
+        zip -r ../InLegalDesk-Source-v1.0.2.zip . -x "*.git*" "*venv*" "*__pycache__*"
+        cd ..
+        
+        # Get file size
+        size=$(du -h InLegalDesk-Source-v1.0.2.zip | cut -f1)
+        echo "✅ Source package created: $size"
+        
+        # Generate checksum
+        sha256sum InLegalDesk-Source-v1.0.2.zip > InLegalDesk-Source-v1.0.2.zip.sha256
+        
+    - name: Upload source package
+      uses: actions/upload-artifact@v3
+      with:
+        name: InLegalDesk-Source-Package
+        path: |
+          InLegalDesk-Source-v1.0.2.zip
+          InLegalDesk-Source-v1.0.2.zip.sha256
+        retention-days: 90
+        
+    - name: Create GitHub Release
+      if: github.event_name == 'workflow_dispatch'
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: v1.0.2-source
+        name: InLegalDesk v1.0.2 - Source Distribution
+        body: |
+          # 🤖 InLegalDesk v1.0.2 - AI Legal Research Platform (Source)
+          
+          ## 📥 Download Options
+          
+          **Source Package**: `InLegalDesk-Source-v1.0.2.zip` (~2MB)
+          
+          This contains the complete source code with build instructions.
+          
+          ## 🚀 Quick Start
+          
+          1. **Download and extract** the ZIP file
+          2. **Follow instructions** in `QUICK_START.md`
+          3. **Install Python 3.8+** if not already installed
+          4. **Run setup commands** for backend and desktop
+          5. **Configure OpenAI API key** for full features
+          
+          ## ✨ What's Included
+          
+          - 🤖 **Hybrid BERT+GPT AI System**: InLegalBERT + T5 + XLNet + OpenAI
+          - ⚖️ **Indian Legal Research**: IPC, CrPC, Evidence Act integration
+          - 💬 **ChatGPT-Style Interface**: Modern legal research experience
+          - 🔒 **Enterprise Security**: AES-256 encryption + protection
+          - 📄 **OCR-Free PDF Processing**: Vision-language models
+          - 🌐 **Bilingual Support**: English + Hindi processing
+          
+          ## 🛠️ Build Windows Installer
+          
+          After extraction, run:
+          ```cmd
+          build_windows_installer.bat
+          ```
+          
+          This creates a professional Windows installer for distribution.
+          
+          ## 🔐 Security
+          
+          Verify package integrity:
+          ```cmd
+          # Windows
+          certutil -hashfile InLegalDesk-Source-v1.0.2.zip SHA256
+          
+          # Linux/Mac  
+          sha256sum InLegalDesk-Source-v1.0.2.zip
+          ```
+          
+          Compare with provided `.sha256` file.
+          
+          ## 📞 Support
+          
+          - **Repository**: https://github.com/ravidatanerd/LEGAL_BERT_IN
+          - **Issues**: https://github.com/ravidatanerd/LEGAL_BERT_IN/issues
+          - **Discussions**: https://github.com/ravidatanerd/LEGAL_BERT_IN/discussions
+        files: |
+          InLegalDesk-Source-v1.0.2.zip
+          InLegalDesk-Source-v1.0.2.zip.sha256
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
