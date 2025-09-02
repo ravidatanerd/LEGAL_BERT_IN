@@ -28,25 +28,59 @@ jobs:
         
     - name: Prepare backend
       run: |
+        # Remove existing server directory if it exists
+        if (Test-Path "desktop\server") {
+          Remove-Item -Recurse -Force "desktop\server"
+        }
         # Copy backend to desktop server directory
         xcopy /E /I backend desktop\server
+        Write-Host "✅ Backend prepared for desktop app"
         
     - name: Create placeholder icon
       run: |
-        # Create assets directory and placeholder icon
-        mkdir installer\assets
-        echo "ICON_PLACEHOLDER" > installer\assets\icon.ico
+        # Create assets directory if it doesn't exist
+        if (-not (Test-Path "installer\assets")) {
+          New-Item -ItemType Directory -Path "installer\assets"
+        }
+        # Create placeholder icon if it doesn't exist
+        if (-not (Test-Path "installer\assets\icon.ico")) {
+          "ICON_PLACEHOLDER" | Out-File "installer\assets\icon.ico" -Encoding ASCII
+        }
+        Write-Host "✅ Icon assets prepared"
         
     - name: Build executable
       run: |
         cd desktop
-        pyinstaller --noconfirm --onedir --name InLegalDesk main.py
+        Write-Host "🏗️ Building InLegalDesk executable..."
+        pyinstaller --noconfirm --onedir --name InLegalDesk `
+          --add-data "server;server" `
+          --add-data ".env.sample;.env.sample" `
+          main.py
+        Write-Host "✅ Executable built successfully"
         
-    - name: Create simple installer
+    - name: Create distribution package
       run: |
-        # Create a simple ZIP distribution instead of Inno Setup
+        Write-Host "📦 Creating distribution package..."
+        
+        # Verify executable was created
+        if (-not (Test-Path "desktop\dist\InLegalDesk\InLegalDesk.exe")) {
+          Write-Host "❌ Executable not found!"
+          exit 1
+        }
+        
+        # Create ZIP distribution
         cd desktop\dist
-        powershell Compress-Archive -Path InLegalDesk -DestinationPath ..\..\InLegalDesk-Windows.zip
+        powershell Compress-Archive -Path InLegalDesk -DestinationPath ..\..\InLegalDesk-Windows.zip -Force
+        
+        # Verify ZIP was created
+        cd ..\..
+        if (Test-Path "InLegalDesk-Windows.zip") {
+          $size = (Get-Item "InLegalDesk-Windows.zip").Length / 1MB
+          Write-Host "✅ Package created: $([math]::Round($size, 1)) MB"
+        } else {
+          Write-Host "❌ Package creation failed!"
+          exit 1
+        }
         
     - name: Upload release asset
       if: startsWith(github.ref, 'refs/tags/')
