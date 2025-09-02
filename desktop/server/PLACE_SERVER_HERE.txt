@@ -1,0 +1,15 @@
+This directory should contain the backend server files when building the desktop application.
+
+During the build process, copy the entire backend/ directory contents here so that the desktop app can launch the server locally.
+
+Required files:
+- app.py
+- ingest.py  
+- retriever.py
+- llm.py
+- chunking.py
+- utils/
+- extractors/
+- sources/
+- requirements.txt
+- .env.sample
