@@ -3,7 +3,7 @@
 ## 🚀 **Quick Installation (Recommended)**
 
 ### **For End Users:**
-1. **Download**: Get `InLegalDesk_Installer.exe` from [GitHub Releases](https://github.com/YOUR_USERNAME/inlegaldesk/releases)
+1. **Download**: Get the latest release from [GitHub Releases](https://github.com/ravidatanerd/LEGAL_BERT_IN/releases)
 2. **Verify**: Check SHA256 checksum (optional but recommended)
 3. **Install**: Run as Administrator → Follow wizard
 4. **Launch**: Start from Start Menu or Desktop
@@ -74,8 +74,8 @@ InLegalDesk_Installer.exe /SILENT /TASKS="desktopicon"
 # For developers who want to run from source:
 
 # 1. Clone repository
-git clone https://github.com/YOUR_USERNAME/inlegaldesk.git
-cd inlegaldesk
+git clone https://github.com/ravidatanerd/LEGAL_BERT_IN.git
+cd LEGAL_BERT_IN
 
 # 2. Setup backend
 cd backend
@@ -251,8 +251,8 @@ del "%PROGRAMDATA%\Microsoft\Windows\Start Menu\Programs\InLegalDesk\*"
 
 ### **Support Resources:**
 - **📖 Documentation**: Complete guides in GitHub repository
-- **🐛 Bug Reports**: [GitHub Issues](https://github.com/YOUR_USERNAME/inlegaldesk/issues)
-- **💬 Community**: [GitHub Discussions](https://github.com/YOUR_USERNAME/inlegaldesk/discussions)
+- **🐛 Bug Reports**: [GitHub Issues](https://github.com/ravidatanerd/LEGAL_BERT_IN/issues)
+- **💬 Community**: [GitHub Discussions](https://github.com/ravidatanerd/LEGAL_BERT_IN/discussions)
 - **📧 Contact**: Create GitHub issue for support
 
 ### **Before Reporting Issues:**

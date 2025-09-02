@@ -5,12 +5,12 @@ Thank you for your interest in contributing to InLegalDesk! This document provid
 ## 🎯 **Ways to Contribute**
 
 ### **🐛 Bug Reports**
-- Report bugs through [GitHub Issues](https://github.com/YOUR_USERNAME/inlegaldesk/issues)
+- Report bugs through [GitHub Issues](https://github.com/ravidatanerd/LEGAL_BERT_IN/issues)
 - Use the bug report template
 - Include system information and steps to reproduce
 
 ### **✨ Feature Requests**
-- Suggest new features through [GitHub Issues](https://github.com/YOUR_USERNAME/inlegaldesk/issues)
+- Suggest new features through [GitHub Issues](https://github.com/ravidatanerd/LEGAL_BERT_IN/issues)
 - Use the feature request template
 - Explain use case and expected behavior
 
@@ -41,7 +41,7 @@ Thank you for your interest in contributing to InLegalDesk! This document provid
 ### **Setup Instructions:**
 ```bash
 # 1. Fork and clone
-git clone https://github.com/YOUR_USERNAME/inlegaldesk.git
+git clone https://github.com/ravidatanerd/LEGAL_BERT_IN.git
 cd inlegaldesk
 
 # 2. Setup backend

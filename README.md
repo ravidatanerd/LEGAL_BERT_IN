@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
-[![Platform: Windows](https://img.shields.io/badge/platform-Windows-blue.svg)](https://github.com/YOUR_USERNAME/inlegaldesk/releases)
+[![Platform: Windows](https://img.shields.io/badge/platform-Windows-blue.svg)](https://github.com/ravidatanerd/LEGAL_BERT_IN/releases)
 [![AI: Hybrid BERT+GPT](https://img.shields.io/badge/AI-Hybrid%20BERT%2BGPT-green.svg)](#hybrid-ai-architecture)
 
 An **advanced AI-powered legal research and judgment drafting platform** specifically designed for Indian law, featuring **hybrid BERT+GPT architecture**, OCR-free PDF processing, InLegalBERT embeddings, and a **ChatGPT-style desktop interface**.
@@ -11,7 +11,9 @@ An **advanced AI-powered legal research and judgment drafting platform** specifi
 *[Add demo video link when available]*
 
 ## 📥 **Quick Download**
-**[📦 Download Windows Installer](https://github.com/YOUR_USERNAME/inlegaldesk/releases/latest)** (~800MB)
+**[📦 Download Latest Release](https://github.com/ravidatanerd/LEGAL_BERT_IN/releases/latest)** 
+
+*Note: If no installer is available yet, GitHub Actions is still building it (takes 10-15 minutes). You can also download the source code and build locally.*
 
 ## ✨ **Key Features**
 

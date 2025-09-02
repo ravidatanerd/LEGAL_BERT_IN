@@ -47,7 +47,7 @@ git push -u origin main
 
 **Before creating the first release, update these files with your actual GitHub username:**
 
-1. **README.md**: Replace `YOUR_USERNAME/inlegaldesk` with your actual repo
+1. **README.md**: Replace `ravidatanerd/LEGAL_BERT_IN` with your actual repo
 2. **INSTALLATION.md**: Update GitHub links
 3. **.github/workflows/build-release.yml**: Update repository references
 
@@ -214,7 +214,7 @@ git push origin v1.0.0
 ```bash
 # Create public repository on GitHub
 # Then run:
-git remote add origin https://github.com/YOUR_USERNAME/inlegaldesk.git
+git remote add origin https://github.com/ravidatanerd/LEGAL_BERT_IN.git
 git push -u origin main
 git tag v1.0.0
 git push origin v1.0.0
