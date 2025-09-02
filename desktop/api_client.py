@@ -17,6 +17,7 @@ class LegalAPIClient:
         self.base_url = os.getenv("BACKEND_URL", "http://127.0.0.1:8877")
         self.client = None
         self.timeout = httpx.Timeout(120.0)
+        self.credentials = {}
     
     async def _get_client(self) -> httpx.AsyncClient:
         """Get or create HTTP client"""
@@ -196,6 +197,16 @@ class LegalAPIClient:
         except Exception as e:
             logger.error(f"Summarize document failed: {e}")
             raise
+    
+    def update_credentials(self, credentials: Dict[str, str]):
+        """Update API credentials"""
+        self.credentials = credentials.copy()
+        
+        # Update environment variables for server
+        for key, value in credentials.items():
+            os.environ[key] = value
+        
+        logger.info("API credentials updated")
     
     def close(self):
         """Close the HTTP client"""

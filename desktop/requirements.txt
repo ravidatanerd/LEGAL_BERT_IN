@@ -21,3 +21,5 @@ playwright==1.40.0
 pytesseract==0.3.10
 opencv-python==4.8.1.78
 unicodedata2==15.1.0
+cryptography==41.0.7
+keyring==24.3.0

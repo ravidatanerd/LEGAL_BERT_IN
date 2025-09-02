@@ -29,6 +29,7 @@ from dotenv import load_dotenv
 
 from api_client import LegalAPIClient
 from server_launcher import ServerLauncher
+from credential_manager import CredentialDialog, SecureCredentialManager
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -278,11 +279,15 @@ class InLegalDeskApp(QMainWindow):
         super().__init__()
         self.api_client = LegalAPIClient()
         self.server_launcher = ServerLauncher()
+        self.credential_manager = SecureCredentialManager()
         self.chat_history: List[Dict[str, Any]] = []
         
         self.setup_ui()
         self.setup_drag_drop()
         self.load_chat_history()
+        
+        # Check for credentials and prompt if needed
+        self.check_credentials()
         
         # Auto-start server
         self.start_backend_server()
@@ -415,6 +420,14 @@ class InLegalDeskApp(QMainWindow):
         self.export_chat_btn = QPushButton("💾 Export Chat")
         self.export_chat_btn.clicked.connect(self.export_chat)
         actions_layout.addWidget(self.export_chat_btn)
+        
+        self.credentials_btn = QPushButton("🔑 API Credentials")
+        self.credentials_btn.clicked.connect(self.manage_credentials)
+        actions_layout.addWidget(self.credentials_btn)
+        
+        self.settings_btn = QPushButton("⚙️ Settings")
+        self.settings_btn.clicked.connect(self.open_settings)
+        actions_layout.addWidget(self.settings_btn)
         
         layout.addWidget(actions_group)
         
@@ -742,17 +755,68 @@ class InLegalDeskApp(QMainWindow):
             self.upload_pdf_file(file_path)
     
     def upload_pdf_file(self, file_path: str):
-        """Upload a specific PDF file"""
-        self.status_label.setText(f"Uploading {Path(file_path).name}...")
+        """Upload a specific PDF file with security validation"""
+        try:
+            from security_validator import DesktopSecurityValidator
+            
+            # Validate file before upload
+            validation = DesktopSecurityValidator.validate_file_for_upload(file_path)
+            
+            if not validation["is_valid"]:
+                error_msg = "File validation failed:\n" + "\n".join(validation["errors"])
+                QMessageBox.critical(self, "Upload Failed", error_msg)
+                return
+            
+            # Show warnings if any
+            if validation["warnings"]:
+                warning_msg = "File validation warnings:\n" + "\n".join(validation["warnings"])
+                warning_msg += "\n\nDo you want to continue with the upload?"
+                
+                reply = QMessageBox.question(
+                    self, 
+                    "Upload Warning", 
+                    warning_msg,
+                    QMessageBox.Yes | QMessageBox.No,
+                    QMessageBox.No
+                )
+                
+                if reply != QMessageBox.Yes:
+                    return
+            
+            # Show file info
+            file_info = validation["file_info"]
+            self.status_label.setText(f"Uploading {file_info['name']} ({file_info['size_mb']} MB)...")
+            
+            worker = APIWorker(self.api_client, "upload", {"file_path": file_path})
+            worker.response_received.connect(
+                lambda r: self._on_upload_success(r, validation)
+            )
+            worker.error_occurred.connect(
+                lambda e: self.status_label.setText(f"Upload failed: {e}")
+            )
+            worker.start()
+            
+        except Exception as e:
+            logger.error(f"Upload validation failed: {e}")
+            QMessageBox.critical(self, "Error", f"Upload validation failed: {e}")
+    
+    def _on_upload_success(self, response: Dict[str, Any], validation: Dict[str, Any]):
+        """Handle successful upload"""
+        filename = response.get('filename', 'Unknown')
+        warnings = response.get('warnings', [])
         
-        worker = APIWorker(self.api_client, "upload", {"file_path": file_path})
-        worker.response_received.connect(
-            lambda r: self.status_label.setText(f"Uploaded: {r.get('filename', 'Unknown')}")
-        )
-        worker.error_occurred.connect(
-            lambda e: self.status_label.setText(f"Upload failed: {e}")
-        )
-        worker.start()
+        self.status_label.setText(f"✓ Uploaded: {filename}")
+        
+        # Show success message with any warnings
+        msg = f"Document '{filename}' uploaded successfully!"
+        
+        if warnings:
+            msg += f"\n\nWarnings:\n" + "\n".join(warnings)
+        
+        if validation.get("warnings"):
+            msg += f"\n\nFile Warnings:\n" + "\n".join(validation["warnings"])
+        
+        QMessageBox.information(self, "Upload Successful", msg)
     
     def export_chat(self):
         """Export current chat to markdown"""
@@ -813,6 +877,121 @@ class InLegalDeskApp(QMainWindow):
         """Save current chat session"""
         # Placeholder for saving chat
         pass
+    
+    def check_credentials(self):
+        """Check if credentials are configured and prompt if needed"""
+        try:
+            # Check if we have credentials in environment
+            if not os.getenv('OPENAI_API_KEY'):
+                # Check if we have stored credentials
+                if not self.credential_manager.credentials_exist():
+                    # Prompt for credentials on first run
+                    QTimer.singleShot(2000, self.show_credentials_prompt)
+                else:
+                    # Try to load credentials
+                    self.status_label.setText("Credentials found - configure to unlock full features")
+            else:
+                self.status_label.setText("API credentials configured")
+                
+        except Exception as e:
+            logger.error(f"Failed to check credentials: {e}")
+    
+    def show_credentials_prompt(self):
+        """Show prompt for first-time credential setup"""
+        reply = QMessageBox.question(
+            self,
+            "API Credentials Setup",
+            "Welcome to InLegalDesk!\n\n"
+            "To unlock full AI features, you'll need to configure your OpenAI API credentials.\n\n"
+            "Would you like to set up your credentials now?",
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.Yes
+        )
+        
+        if reply == QMessageBox.Yes:
+            self.manage_credentials()
+    
+    def manage_credentials(self):
+        """Open credential management dialog"""
+        try:
+            dialog = CredentialDialog(self)
+            dialog.credentials_updated.connect(self.on_credentials_updated)
+            dialog.exec()
+            
+        except Exception as e:
+            logger.error(f"Failed to open credential dialog: {e}")
+            QMessageBox.critical(self, "Error", f"Failed to open credential manager: {e}")
+    
+    def on_credentials_updated(self, credentials: Dict[str, Any]):
+        """Handle credential updates"""
+        try:
+            # Update environment variables
+            for key, value in credentials.items():
+                os.environ[key] = value
+            
+            # Update API client
+            self.api_client.update_credentials(credentials)
+            
+            # Update status
+            self.status_label.setText("✓ API credentials updated")
+            
+            # Show success message
+            QMessageBox.information(
+                self,
+                "Success",
+                "API credentials have been updated successfully!\n\n"
+                "The application now has access to full AI features."
+            )
+            
+        except Exception as e:
+            logger.error(f"Failed to update credentials: {e}")
+            QMessageBox.critical(self, "Error", f"Failed to update credentials: {e}")
+    
+    def open_settings(self):
+        """Open settings dialog"""
+        try:
+            from secure_settings import SecureSettingsDialog
+            
+            dialog = SecureSettingsDialog(self)
+            dialog.settings_updated.connect(self.on_settings_updated)
+            dialog.exec()
+            
+        except Exception as e:
+            logger.error(f"Failed to open settings: {e}")
+            QMessageBox.critical(self, "Error", f"Failed to open settings: {e}")
+    
+    def on_settings_updated(self, settings: Dict[str, Any]):
+        """Handle settings updates"""
+        try:
+            # Apply settings to current session
+            self.status_label.setText("✓ Settings updated")
+            
+            # Restart backend if needed
+            if settings.get("backend_port") != int(os.getenv("BACKEND_PORT", 8877)):
+                reply = QMessageBox.question(
+                    self,
+                    "Restart Required",
+                    "Backend port changed. Restart the backend server?",
+                    QMessageBox.Yes | QMessageBox.No,
+                    QMessageBox.Yes
+                )
+                
+                if reply == QMessageBox.Yes:
+                    self.restart_backend()
+            
+        except Exception as e:
+            logger.error(f"Failed to apply settings: {e}")
+    
+    def restart_backend(self):
+        """Restart the backend server"""
+        try:
+            self.server_launcher.stop_server()
+            self.server_status.setText("Status: Restarting...")
+            QTimer.singleShot(2000, self.start_backend_server)
+            
+        except Exception as e:
+            logger.error(f"Failed to restart backend: {e}")
+            self.server_status.setText("Status: Restart failed")
 
 def main():
     """Main application entry point"""
