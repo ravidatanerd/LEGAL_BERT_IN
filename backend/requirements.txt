@@ -5,6 +5,9 @@ pydantic==2.5.0
 transformers==4.36.0
 torch==2.1.0
 sentence-transformers==2.2.2
+# Hybrid model dependencies
+protobuf==4.25.1
+sentencepiece==0.1.99
 faiss-cpu==1.7.4
 rank-bm25==0.2.2
 PyMuPDF==1.23.8

@@ -478,9 +478,19 @@ class InLegalDeskApp(QMainWindow):
         
         # Mode selector
         self.mode_combo = QComboBox()
-        self.mode_combo.addItems(["Ask Question", "Generate Judgment"])
+        self.mode_combo.addItems([
+            "Ask Question", 
+            "Generate Judgment", 
+            "Hybrid Analysis",
+            "Legal Summary"
+        ])
         controls_layout.addWidget(QLabel("Mode:"))
         controls_layout.addWidget(self.mode_combo)
+        
+        # AI Model indicator
+        self.ai_mode_label = QLabel("🤖 Hybrid BERT+GPT")
+        self.ai_mode_label.setStyleSheet("color: #007acc; font-weight: bold; font-size: 12px;")
+        controls_layout.addWidget(self.ai_mode_label)
         
         controls_layout.addStretch()
         input_layout.addLayout(controls_layout)
@@ -614,13 +624,28 @@ class InLegalDeskApp(QMainWindow):
                 "max_results": 5
             }
             worker = APIWorker(self.api_client, "ask", data)
-        else:  # Generate Judgment
+        elif mode == "Generate Judgment":
             data = {
                 "case_facts": text,
                 "legal_issues": [text],  # Simplified for demo
                 "language": language
             }
             worker = APIWorker(self.api_client, "judgment", data)
+        elif mode == "Hybrid Analysis":
+            # Enhanced hybrid analysis mode
+            data = {
+                "question": f"Perform comprehensive hybrid BERT+GPT analysis: {text}",
+                "language": language,
+                "max_results": 8  # More sources for hybrid analysis
+            }
+            worker = APIWorker(self.api_client, "ask", data)
+        else:  # Legal Summary
+            data = {
+                "question": f"Provide a structured legal summary: {text}",
+                "language": language,
+                "max_results": 5
+            }
+            worker = APIWorker(self.api_client, "ask", data)
         
         worker.response_received.connect(self.on_response_received)
         worker.error_occurred.connect(self.on_api_error)
@@ -633,9 +658,14 @@ class InLegalDeskApp(QMainWindow):
             self.send_btn.setEnabled(True)
             
             if "answer" in response:
-                # Q&A response
+                # Q&A response (potentially with hybrid analysis)
                 content = response["answer"]
                 sources = response.get("sources", [])
+                
+                # Check if this is a hybrid analysis response
+                if "hybrid_analysis" in response:
+                    hybrid_info = response["hybrid_analysis"]
+                    content = self._enhance_response_with_hybrid_info(content, hybrid_info)
                 
                 # Add assistant message with streaming effect
                 self.add_streaming_message(content, sources)
@@ -721,6 +751,50 @@ class InLegalDeskApp(QMainWindow):
         ])
         
         return "\n".join(md_parts)
+    
+    def _enhance_response_with_hybrid_info(self, content: str, hybrid_info: Dict[str, Any]) -> str:
+        """Enhance response content with hybrid analysis information"""
+        
+        enhanced_parts = [content]
+        
+        # Add hybrid analysis section
+        if hybrid_info:
+            enhanced_parts.append("\n\n---\n## 🤖 Hybrid BERT+GPT Analysis")
+            
+            # Add confidence metrics
+            confidence = hybrid_info.get("confidence_score", 0)
+            hybrid_score = hybrid_info.get("hybrid_score", 0)
+            
+            enhanced_parts.append(f"**Analysis Quality:**")
+            enhanced_parts.append(f"- Contextual Understanding (BERT): {confidence:.2f}")
+            enhanced_parts.append(f"- Hybrid Model Score: {hybrid_score:.2f}")
+            
+            # Add contextual understanding
+            context = hybrid_info.get("contextual_understanding", {})
+            if context:
+                enhanced_parts.append(f"\n**Contextual Analysis:**")
+                enhanced_parts.append(f"- Context Type: {context.get('context_type', 'Unknown').replace('_', ' ').title()}")
+                enhanced_parts.append(f"- Legal Complexity: {context.get('complexity_score', 0):.2f}")
+                
+                legal_concepts = context.get("legal_concepts", [])
+                if legal_concepts:
+                    enhanced_parts.append(f"- Legal Concepts: {', '.join(legal_concepts[:5])}")
+            
+            # Add legal reasoning
+            reasoning = hybrid_info.get("legal_reasoning", [])
+            if reasoning:
+                enhanced_parts.append(f"\n**Legal Reasoning Steps:**")
+                for i, step in enumerate(reasoning[:3], 1):
+                    enhanced_parts.append(f"{i}. {step}")
+            
+            # Add model information
+            enhanced_parts.append(f"\n**AI Models Used:**")
+            enhanced_parts.append(f"- 🧠 **InLegalBERT**: Contextual understanding of Indian legal text")
+            enhanced_parts.append(f"- 🤖 **T5/XLNet**: Encoder-decoder and hybrid autoregressive generation")
+            enhanced_parts.append(f"- 💬 **GPT**: Advanced natural language generation")
+            enhanced_parts.append(f"- 🔗 **Hybrid Fusion**: Combined strengths for superior legal analysis")
+        
+        return "\n".join(enhanced_parts)
     
     def ingest_statutes(self):
         """Ingest Indian statutes"""

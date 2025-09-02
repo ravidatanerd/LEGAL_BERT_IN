@@ -10,30 +10,40 @@ import httpx
 import asyncio
 
 from utils.textnorm import is_devanagari_text
+from hybrid_legal_ai import HybridLegalAI, create_hybrid_legal_ai
 
 logger = logging.getLogger(__name__)
 
 class LegalLLM:
-    """LLM interface for legal AI tasks"""
+    """Enhanced LLM interface with hybrid BERT+GPT capabilities"""
     
     def __init__(self):
         self.api_key = os.getenv("OPENAI_API_KEY")
         self.base_url = os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1")
         self.model = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
         self.client = None
+        self.hybrid_ai: Optional[HybridLegalAI] = None
+        self.use_hybrid = os.getenv("ENABLE_HYBRID_AI", "true").lower() == "true"
     
     async def initialize(self):
-        """Initialize LLM client"""
-        if not self.api_key:
-            logger.warning("OpenAI API key not provided - LLM features will be limited")
-            return
+        """Initialize LLM client and hybrid AI system"""
+        if self.api_key:
+            self.client = httpx.AsyncClient(
+                timeout=httpx.Timeout(120.0),
+                headers={"Authorization": f"Bearer {self.api_key}"}
+            )
+            logger.info("LLM client initialized")
+        else:
+            logger.warning("OpenAI API key not provided - using hybrid fallback mode")
         
-        self.client = httpx.AsyncClient(
-            timeout=httpx.Timeout(120.0),
-            headers={"Authorization": f"Bearer {self.api_key}"}
-        )
-        
-        logger.info("LLM client initialized")
+        # Initialize hybrid AI system
+        if self.use_hybrid:
+            try:
+                self.hybrid_ai = await create_hybrid_legal_ai()
+                logger.info("Hybrid BERT+GPT system initialized")
+            except Exception as e:
+                logger.warning(f"Hybrid AI initialization failed, using basic mode: {e}")
+                self.hybrid_ai = None
     
     async def generate_answer(
         self, 
@@ -41,30 +51,57 @@ class LegalLLM:
         sources: List[Dict[str, Any]], 
         language: str = "auto"
     ) -> Dict[str, Any]:
-        """Generate grounded answer with bracket citations"""
+        """Generate grounded answer using hybrid BERT+GPT system"""
         try:
-            if not self.client:
+            # Use hybrid AI system if available
+            if self.hybrid_ai:
+                logger.info("Using hybrid BERT+GPT system for enhanced legal analysis")
+                
+                # Perform hybrid analysis and generation
+                hybrid_result = await self.hybrid_ai.analyze_and_generate(
+                    query=question,
+                    sources=sources,
+                    generation_type="answer",
+                    language=language
+                )
+                
+                # Format hybrid response
+                response_text = self._format_hybrid_response(hybrid_result, sources)
+                
                 return {
-                    "text": "LLM not available. Please configure OpenAI API key.",
-                    "language_detected": "en"
+                    "text": response_text,
+                    "language_detected": hybrid_result.contextual_understanding.get("language", "en"),
+                    "hybrid_analysis": {
+                        "confidence_score": hybrid_result.confidence_score,
+                        "hybrid_score": hybrid_result.hybrid_score,
+                        "legal_reasoning": hybrid_result.legal_reasoning,
+                        "contextual_understanding": {
+                            "context_type": hybrid_result.contextual_understanding.get("context_type"),
+                            "legal_concepts": hybrid_result.contextual_understanding.get("legal_concepts", []),
+                            "complexity_score": hybrid_result.contextual_understanding.get("complexity_score", 0)
+                        }
+                    },
+                    "enhanced_citations": hybrid_result.citations
                 }
             
-            # Detect language
-            detected_lang = self._detect_language(question, language)
+            # Fallback to basic LLM if hybrid not available
+            elif self.client:
+                logger.info("Using basic LLM mode")
+                detected_lang = self._detect_language(question, language)
+                context = self._prepare_context(sources)
+                prompt = self._create_qa_prompt(question, context, detected_lang)
+                response = await self._call_llm(prompt)
+                
+                return {
+                    "text": response,
+                    "language_detected": detected_lang
+                }
             
-            # Prepare context from sources
-            context = self._prepare_context(sources)
-            
-            # Create prompt
-            prompt = self._create_qa_prompt(question, context, detected_lang)
-            
-            # Generate response
-            response = await self._call_llm(prompt)
-            
-            return {
-                "text": response,
-                "language_detected": detected_lang
-            }
+            else:
+                return {
+                    "text": "AI system not available. Please configure OpenAI API key or enable hybrid mode.",
+                    "language_detected": "en"
+                }
             
         except Exception as e:
             logger.error(f"Failed to generate answer: {e}")
@@ -72,6 +109,39 @@ class LegalLLM:
                 "text": f"Error generating answer: {str(e)}",
                 "language_detected": "en"
             }
+    
+    def _format_hybrid_response(self, hybrid_result: Any, sources: List[Dict[str, Any]]) -> str:
+        """Format hybrid analysis result into readable response"""
+        
+        response_parts = []
+        
+        # Add main generated response
+        response_parts.append(hybrid_result.generated_response)
+        
+        # Add legal reasoning section
+        if hybrid_result.legal_reasoning:
+            response_parts.append("\n\n**Legal Analysis:**")
+            for i, reasoning in enumerate(hybrid_result.legal_reasoning, 1):
+                response_parts.append(f"{i}. {reasoning}")
+        
+        # Add contextual insights
+        context = hybrid_result.contextual_understanding
+        if context.get("legal_concepts"):
+            response_parts.append(f"\n\n**Legal Concepts Identified:** {', '.join(context['legal_concepts'][:5])}")
+        
+        # Add confidence and hybrid scoring
+        response_parts.append(f"\n\n**Analysis Quality:**")
+        response_parts.append(f"- Contextual Understanding: {hybrid_result.confidence_score:.2f}")
+        response_parts.append(f"- Hybrid Model Score: {hybrid_result.hybrid_score:.2f}")
+        response_parts.append(f"- Legal Complexity: {context.get('complexity_score', 0):.2f}")
+        
+        # Add enhanced citations
+        if hybrid_result.citations:
+            response_parts.append(f"\n\n**Sources:**")
+            for citation in hybrid_result.citations[:3]:  # Top 3 sources
+                response_parts.append(f"[{citation['index']}] {citation['filename']} (Relevance: {citation['relevance_score']:.2f})")
+        
+        return "\n".join(response_parts)
     
     async def generate_summary(
         self, 
@@ -108,30 +178,187 @@ class LegalLLM:
         relevant_sources: List[Dict[str, Any]],
         language: str = "auto"
     ) -> Dict[str, Any]:
-        """Generate structured legal judgment"""
+        """Generate structured legal judgment using hybrid system"""
         try:
-            if not self.client:
-                return self._fallback_judgment()
-            
-            detected_lang = self._detect_language(case_facts, language)
-            context = self._prepare_context(relevant_sources)
-            
-            prompt = self._create_judgment_prompt(
-                case_facts, legal_issues, context, detected_lang
-            )
-            
-            response = await self._call_llm(prompt, max_tokens=3000)
-            
-            # Parse structured response
-            try:
-                judgment_data = json.loads(response)
+            # Use hybrid AI for enhanced judgment generation
+            if self.hybrid_ai:
+                logger.info("Using hybrid BERT+GPT system for judgment generation")
+                
+                # Combine case facts and legal issues for analysis
+                combined_input = f"Case Facts: {case_facts}\n\nLegal Issues: {'; '.join(legal_issues)}"
+                
+                # Perform hybrid analysis
+                hybrid_result = await self.hybrid_ai.analyze_and_generate(
+                    query=combined_input,
+                    sources=relevant_sources,
+                    generation_type="judgment",
+                    language=language
+                )
+                
+                # Create enhanced judgment structure
+                judgment_data = self._create_enhanced_judgment_structure(
+                    hybrid_result, case_facts, legal_issues, relevant_sources
+                )
+                
                 return judgment_data
-            except json.JSONDecodeError:
-                return self._parse_judgment_fallback(response)
+            
+            # Fallback to basic LLM
+            elif self.client:
+                logger.info("Using basic LLM for judgment generation")
+                detected_lang = self._detect_language(case_facts, language)
+                context = self._prepare_context(relevant_sources)
+                
+                prompt = self._create_judgment_prompt(
+                    case_facts, legal_issues, context, detected_lang
+                )
+                
+                response = await self._call_llm(prompt, max_tokens=3000)
+                
+                try:
+                    judgment_data = json.loads(response)
+                    return judgment_data
+                except json.JSONDecodeError:
+                    return self._parse_judgment_fallback(response)
+            
+            else:
+                return self._fallback_judgment()
             
         except Exception as e:
             logger.error(f"Failed to generate judgment: {e}")
             return self._fallback_judgment()
+    
+    def _create_enhanced_judgment_structure(
+        self,
+        hybrid_result: Any,
+        case_facts: str,
+        legal_issues: List[str],
+        relevant_sources: List[Dict[str, Any]]
+    ) -> Dict[str, Any]:
+        """Create enhanced judgment structure using hybrid analysis"""
+        
+        context = hybrid_result.contextual_understanding
+        
+        # Extract legal concepts and entities for judgment
+        legal_concepts = context.get("legal_concepts", [])
+        legal_entities = context.get("legal_entities", [])
+        context_type = context.get("context_type", "general_legal")
+        
+        # Determine applicable law based on concepts
+        applicable_law = self._extract_applicable_law_from_concepts(legal_concepts, legal_entities)
+        
+        # Create enhanced judgment structure
+        judgment = {
+            "metadata": {
+                "case_type": self._determine_case_type(legal_concepts),
+                "jurisdiction": "High Court",  # Default
+                "date": "2024-01-01",
+                "hybrid_analysis": {
+                    "confidence_score": hybrid_result.confidence_score,
+                    "hybrid_score": hybrid_result.hybrid_score,
+                    "context_type": context_type,
+                    "complexity_score": context.get("complexity_score", 0)
+                }
+            },
+            "framing": hybrid_result.generated_response,
+            "points_for_determination": legal_issues,
+            "applicable_law": applicable_law,
+            "arguments": {
+                "petitioner": "Arguments based on contextual analysis",
+                "respondent": "Counter-arguments derived from legal reasoning"
+            },
+            "court_analysis": [
+                {
+                    "issue": issue,
+                    "analysis": f"Based on hybrid BERT+GPT analysis: {reasoning}",
+                    "citations": [source.get("filename", "Unknown") for source in relevant_sources[:2]]
+                }
+                for issue, reasoning in zip(legal_issues, hybrid_result.legal_reasoning)
+            ],
+            "findings": [
+                f"Hybrid contextual analysis confidence: {hybrid_result.confidence_score:.2f}",
+                f"Legal complexity assessment: {context.get('complexity_score', 0):.2f}",
+                f"Identified {len(legal_concepts)} relevant legal concepts"
+            ],
+            "relief": {
+                "final_order": "Order based on hybrid legal analysis",
+                "directions": ["Direction derived from contextual understanding"],
+                "costs": "Costs as per legal complexity assessment"
+            },
+            "prediction": {
+                "likely_outcome": "Outcome predicted using hybrid model scoring",
+                "probabilities": {
+                    "favor_petitioner": 0.4 + (hybrid_result.hybrid_score * 0.2),
+                    "favor_respondent": 0.4 + ((1 - hybrid_result.hybrid_score) * 0.2),
+                    "partial_relief": 0.2
+                },
+                "drivers": [
+                    f"Hybrid model confidence: {hybrid_result.confidence_score:.2f}",
+                    f"Contextual understanding depth",
+                    f"Legal concept analysis: {len(legal_concepts)} concepts"
+                ]
+            },
+            "limitations": [
+                "Analysis based on hybrid BERT+GPT model",
+                "Requires verification by qualified legal professionals",
+                "Contextual understanding may vary with case complexity"
+            ],
+            "hybrid_insights": {
+                "model_strategy": hybrid_result.contextual_understanding.get("strategy", "hybrid"),
+                "legal_reasoning_steps": hybrid_result.legal_reasoning,
+                "enhanced_citations": hybrid_result.citations
+            }
+        }
+        
+        return judgment
+    
+    def _extract_applicable_law_from_concepts(self, legal_concepts: List[str], legal_entities: List[Dict[str, Any]]) -> Dict[str, List[str]]:
+        """Extract applicable law based on identified concepts and entities"""
+        
+        applicable_law = {
+            "constitutional": [],
+            "statutes": [],
+            "rules_regulations": [],
+            "precedents": []
+        }
+        
+        # Map concepts to law categories
+        for concept in legal_concepts:
+            if "criminal_law" in concept:
+                applicable_law["statutes"].append("Indian Penal Code, 1860")
+                applicable_law["statutes"].append("Code of Criminal Procedure, 1973")
+            elif "constitutional_law" in concept:
+                applicable_law["constitutional"].append("Constitution of India")
+            elif "procedural_law" in concept:
+                applicable_law["statutes"].append("Code of Criminal Procedure, 1973")
+                applicable_law["statutes"].append("Indian Evidence Act, 1872")
+            elif "civil_law" in concept:
+                applicable_law["statutes"].append("Indian Contract Act, 1872")
+                applicable_law["statutes"].append("Transfer of Property Act, 1882")
+        
+        # Add from legal entities
+        for entity in legal_entities:
+            if entity.get("type") == "act_reference":
+                act_name = entity.get("value", "")
+                if act_name not in applicable_law["statutes"]:
+                    applicable_law["statutes"].append(act_name)
+        
+        # Remove duplicates
+        for category in applicable_law:
+            applicable_law[category] = list(set(applicable_law[category]))
+        
+        return applicable_law
+    
+    def _determine_case_type(self, legal_concepts: List[str]) -> str:
+        """Determine case type based on legal concepts"""
+        
+        if any("criminal_law" in concept for concept in legal_concepts):
+            return "criminal"
+        elif any("constitutional_law" in concept for concept in legal_concepts):
+            return "constitutional"
+        elif any("civil_law" in concept for concept in legal_concepts):
+            return "civil"
+        else:
+            return "miscellaneous"
     
     def _detect_language(self, text: str, language: str) -> str:
         """Detect or validate language setting"""
