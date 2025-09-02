@@ -41,44 +41,26 @@ jobs:
         find release-package -name ".env" -delete 2>/dev/null || true
         
         # Create user instructions
-        cat > release-package/QUICK_START.md << 'EOF'
-# InLegalDesk Quick Start
-        
-## 🚀 Windows Setup
-1. Install Python 3.8+ from python.org
-2. Open Command Prompt as Administrator
-3. Navigate to this folder
-        
-### Backend Setup:
-```cmd
-cd backend
-python -m venv venv
-venv\Scripts\activate
-pip install -r requirements.txt
-copy .env.sample .env
-REM Edit .env and add your OpenAI API key
-python app.py
-```
-        
-### Desktop Setup (new Command Prompt):
-```cmd
-cd desktop
-python -m venv venv
-venv\Scripts\activate
-pip install -r requirements.txt
-xcopy /E /I ..\backend server
-python main.py
-```
-        
-## 🛠️ Build Installer:
-```cmd
-build_windows_installer.bat
-```
-        
-## 📞 Support:
-- Repository: https://github.com/ravidatanerd/LEGAL_BERT_IN
-- Issues: https://github.com/ravidatanerd/LEGAL_BERT_IN/issues
-EOF
+        echo "# InLegalDesk Quick Start" > release-package/QUICK_START.md
+        echo "" >> release-package/QUICK_START.md
+        echo "## Windows Setup" >> release-package/QUICK_START.md
+        echo "1. Install Python 3.8+ from python.org" >> release-package/QUICK_START.md
+        echo "2. Open Command Prompt as Administrator" >> release-package/QUICK_START.md
+        echo "3. Navigate to this folder" >> release-package/QUICK_START.md
+        echo "" >> release-package/QUICK_START.md
+        echo "### Backend Setup:" >> release-package/QUICK_START.md
+        echo "cd backend" >> release-package/QUICK_START.md
+        echo "python -m venv venv" >> release-package/QUICK_START.md
+        echo "venv\\Scripts\\activate" >> release-package/QUICK_START.md
+        echo "pip install -r requirements.txt" >> release-package/QUICK_START.md
+        echo "copy .env.sample .env" >> release-package/QUICK_START.md
+        echo "python app.py" >> release-package/QUICK_START.md
+        echo "" >> release-package/QUICK_START.md
+        echo "### Desktop Setup (new Command Prompt):" >> release-package/QUICK_START.md
+        echo "cd desktop" >> release-package/QUICK_START.md
+        echo "python main.py" >> release-package/QUICK_START.md
+        echo "" >> release-package/QUICK_START.md
+        echo "Repository: https://github.com/ravidatanerd/LEGAL_BERT_IN" >> release-package/QUICK_START.md
         
         # Create ZIP package
         cd release-package
