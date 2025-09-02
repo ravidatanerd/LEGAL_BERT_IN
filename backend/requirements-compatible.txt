@@ -1,0 +1,40 @@
+# InLegalDesk - Compatible Requirements (Older Python/pip)
+# Use this if the main requirements.txt fails
+
+# Core FastAPI stack (older compatible versions)
+fastapi>=0.68.0,<0.84.0
+uvicorn>=0.15.0,<0.19.0
+python-multipart>=0.0.5
+pydantic>=1.8.0,<2.0.0
+
+# AI and ML libraries (compatible versions)
+transformers>=4.12.0,<4.19.0
+torch>=1.9.0,<1.13.0
+sentence-transformers>=2.1.0,<2.3.0
+numpy>=1.19.0,<1.22.0
+
+# Document processing
+PyMuPDF>=1.18.0
+Pillow>=8.0.0
+pytesseract>=0.3.7
+opencv-python>=4.5.0
+
+# Text processing
+rank-bm25>=0.2.0
+markdown>=3.3.0
+
+# HTTP and async
+httpx>=0.20.0
+aiofiles>=0.7.0
+requests>=2.25.0
+
+# Environment and config
+python-dotenv>=0.15.0
+
+# Security (basic versions)
+cryptography>=3.0.0
+
+# Optional - install separately if needed
+# faiss-cpu>=1.6.0
+# protobuf>=3.15.0
+# sentencepiece>=0.1.90
