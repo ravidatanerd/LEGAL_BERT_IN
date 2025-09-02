@@ -6,9 +6,13 @@ on:
       - 'v*'
   workflow_dispatch:
 
+permissions:
+  contents: write
+  actions: read
+
 jobs:
   build-windows-installer:
-    runs-on: windows-latest
+    runs-on: windows-2022
     
     steps:
     - name: Checkout repository

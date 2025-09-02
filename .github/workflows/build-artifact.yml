@@ -1,0 +1,101 @@
+name: Build InLegalDesk Artifact
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  build-source-package:
+    runs-on: ubuntu-22.04
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Create source distribution
+      run: |
+        echo "📦 Creating InLegalDesk source distribution..."
+        
+        # Create clean package
+        mkdir -p inlegaldesk-package
+        
+        # Copy source files (exclude build artifacts)
+        cp -r backend inlegaldesk-package/
+        cp -r desktop inlegaldesk-package/
+        cp -r installer inlegaldesk-package/
+        cp *.md inlegaldesk-package/ 2>/dev/null || true
+        cp LICENSE inlegaldesk-package/ 2>/dev/null || true
+        cp *.bat inlegaldesk-package/ 2>/dev/null || true
+        
+        # Clean up
+        find inlegaldesk-package -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
+        find inlegaldesk-package -name "*.pyc" -delete 2>/dev/null || true
+        find inlegaldesk-package -name ".env" -delete 2>/dev/null || true
+        rm -rf inlegaldesk-package/backend/data/* 2>/dev/null || true
+        
+        # Create user guide
+        cat > inlegaldesk-package/QUICK_START.txt << 'EOF'
+InLegalDesk v1.0.3 - AI Legal Research Platform
+
+QUICK START (Windows):
+1. Install Python 3.8+ from python.org
+2. Open Command Prompt as Administrator
+3. Navigate to this folder
+
+BACKEND SETUP:
+cd backend
+python -m venv venv
+venv\Scripts\activate
+pip install -r requirements.txt
+copy .env.sample .env
+REM Edit .env and add OpenAI API key
+python app.py
+
+DESKTOP SETUP (new Command Prompt):
+cd desktop  
+python -m venv venv
+venv\Scripts\activate
+pip install -r requirements.txt
+xcopy /E /I ..\backend server
+python main.py
+
+BUILD INSTALLER:
+build_windows_installer.bat
+
+FEATURES:
+- Hybrid BERT+GPT AI architecture
+- Indian legal research specialization
+- ChatGPT-style interface
+- Enterprise security
+- OCR-free PDF processing
+
+SUPPORT:
+Repository: https://github.com/ravidatanerd/LEGAL_BERT_IN
+Issues: https://github.com/ravidatanerd/LEGAL_BERT_IN/issues
+EOF
+        
+        # Create ZIP
+        cd inlegaldesk-package
+        zip -r ../InLegalDesk-Source.zip . -x "*.git*" "*venv*"
+        cd ..
+        
+        # Generate checksum
+        sha256sum InLegalDesk-Source.zip > InLegalDesk-Source.zip.sha256
+        
+        echo "✅ Source package created successfully"
+        ls -lh InLegalDesk-Source.zip*
+        
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: InLegalDesk-Source-Package
+        path: |
+          InLegalDesk-Source.zip
+          InLegalDesk-Source.zip.sha256
+        retention-days: 90
