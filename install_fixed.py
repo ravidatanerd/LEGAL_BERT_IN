@@ -64,44 +64,51 @@ def setup_backend():
     print("📋 Upgrading pip...")
     run_command(f'"{pip_path}" install --upgrade pip')
     
-    # Core packages in order of dependency
-    core_packages = [
-        "numpy>=1.19.0",
-        "pydantic>=1.8.0,<2.0.0",
-        "fastapi>=0.65.0,<0.85.0",
-        "uvicorn>=0.13.0",
-        "python-dotenv>=0.15.0",
-        "requests>=2.25.0",
-        "httpx>=0.20.0",
-        "aiofiles>=0.6.0",
-        "python-multipart>=0.0.5"
-    ]
+    # Try minimal requirements first for maximum compatibility
+    print("📦 Trying minimal requirements for maximum compatibility...")
     
-    print("📦 Installing core packages...")
-    install_with_fallback(core_packages, pip_path)
+    success, output = run_command(f'"{pip_path}" install -r requirements-minimal.txt')
     
-    # AI packages (may need fallback)
-    ai_packages = [
-        "torch>=1.7.0",
-        "transformers>=4.5.0,<=4.18.0",
-        "sentence-transformers>=2.0.0"
-    ]
-    
-    print("🤖 Installing AI packages...")
-    install_with_fallback(ai_packages, pip_path)
-    
-    # Optional packages
-    optional_packages = [
-        "faiss-cpu>=1.6.0",
-        "rank-bm25>=0.2.0",
-        "PyMuPDF>=1.18.0",
-        "Pillow>=8.0.0",
-        "markdown>=3.2.0",
-        "cryptography>=3.0.0"
-    ]
-    
-    print("📋 Installing optional packages...")
-    install_with_fallback(optional_packages, pip_path)
+    if success:
+        print("✅ Minimal requirements installed successfully")
+        
+        # Try to install optional advanced packages
+        advanced_packages = [
+            "sentence-transformers>=2.0.0",
+            "faiss-cpu>=1.6.0", 
+            "protobuf>=3.15.0",
+            "sentencepiece>=0.1.85"
+        ]
+        
+        print("🔧 Installing advanced packages (optional)...")
+        for package in advanced_packages:
+            success, _ = run_command(f'"{pip_path}" install "{package}"')
+            if success:
+                print(f"✅ {package} installed")
+            else:
+                print(f"⚠️  {package} skipped (not available)")
+        
+    else:
+        print("⚠️  Minimal requirements failed, trying individual packages...")
+        
+        # Fallback to individual essential packages
+        essential_packages = [
+            "fastapi>=0.60.0",
+            "uvicorn>=0.12.0", 
+            "pydantic>=1.7.0",
+            "transformers<=4.18.0",
+            "torch>=1.6.0",
+            "numpy>=1.18.0",
+            "PyMuPDF<=1.19.6",
+            "Pillow>=7.0.0",
+            "httpx>=0.18.0",
+            "requests>=2.20.0",
+            "python-dotenv>=0.10.0",
+            "markdown>=3.0.0"
+        ]
+        
+        print("📋 Installing essential packages individually...")
+        install_with_fallback(essential_packages, pip_path)
     
     # Copy environment file
     if not Path(".env").exists() and Path(".env.sample").exists():

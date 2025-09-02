@@ -1,0 +1,28 @@
+# InLegalDesk Desktop Minimal Requirements - Maximum Compatibility
+# Essential packages only for core desktop functionality
+
+# Desktop GUI (essential)
+PySide6>=6.0.0
+
+# Core dependencies
+httpx>=0.18.0
+python-dotenv>=0.10.0
+markdown>=3.0.0
+requests>=2.20.0
+
+# Basic security
+cryptography>=2.8.0
+
+# Essential backend for bundled server
+fastapi>=0.60.0
+uvicorn>=0.12.0
+pydantic>=1.7.0
+transformers>=4.5.0,<=4.18.0
+torch>=1.6.0
+numpy>=1.18.0
+PyMuPDF>=1.16.0,<=1.19.6
+Pillow>=7.0.0
+python-multipart>=0.0.5
+
+# Note: For full hybrid AI features, install additionally:
+# pip install sentence-transformers faiss-cpu protobuf sentencepiece

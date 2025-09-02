@@ -1,0 +1,35 @@
+# InLegalDesk Minimal Requirements - Maximum Compatibility
+# Guaranteed to work with most Python environments
+# Includes only essential packages for core functionality
+
+# Core web framework (essential)
+fastapi>=0.60.0
+uvicorn>=0.12.0
+pydantic>=1.7.0
+python-multipart>=0.0.5
+
+# Basic AI (essential for legal research)
+transformers>=4.5.0,<=4.18.0
+torch>=1.6.0
+numpy>=1.18.0
+
+# Document processing (basic)
+PyMuPDF>=1.16.0,<=1.19.6
+Pillow>=7.0.0
+
+# HTTP and utilities
+httpx>=0.18.0
+requests>=2.20.0
+python-dotenv>=0.10.0
+
+# Text processing
+markdown>=3.0.0
+
+# Security (basic)
+cryptography>=2.8.0
+
+# Note: Advanced features may require additional packages:
+# - sentence-transformers (for embeddings)
+# - faiss-cpu (for vector search) 
+# - protobuf + sentencepiece (for T5/XLNet models)
+# Install these manually if needed: pip install sentence-transformers faiss-cpu
