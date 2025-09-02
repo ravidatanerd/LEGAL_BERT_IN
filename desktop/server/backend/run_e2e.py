@@ -8,6 +8,7 @@ import tempfile
 import json
 import os
 from pathlib import Path
+from typing import Dict, Any
 import httpx
 
 # Configure logging

@@ -19,3 +19,7 @@ pytesseract==0.3.10
 opencv-python==4.8.1.78
 unicodedata2==15.1.0
 markdown==3.5.1
+cryptography==41.0.7
+bleach==6.1.0
+python-jose[cryptography]==3.3.0
+slowapi==0.1.9

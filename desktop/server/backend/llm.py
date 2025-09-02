@@ -2,6 +2,7 @@
 LLM integration for legal question answering and judgment generation
 """
 import os
+import re
 import json
 import logging
 from typing import List, Dict, Any, Optional
@@ -305,30 +306,53 @@ Please provide the judgment in the following JSON structure:"""
         return prompt + "\n\n" + schema
     
     async def _call_llm(self, prompt: str, max_tokens: int = 2000) -> str:
-        """Make API call to LLM"""
+        """Make API call to LLM with security measures"""
         try:
+            # Validate prompt length
+            if len(prompt) > 50000:
+                prompt = prompt[:50000] + "\n[Content truncated for safety]"
+            
             payload = {
                 "model": self.model,
                 "messages": [
                     {"role": "user", "content": prompt}
                 ],
-                "max_tokens": max_tokens,
+                "max_tokens": min(max_tokens, 4000),  # Cap max tokens
                 "temperature": 0.1
             }
             
+            # Make request with timeout
             response = await self.client.post(
                 f"{self.base_url}/chat/completions",
-                json=payload
+                json=payload,
+                timeout=120.0
             )
             
-            if response.status_code != 200:
-                raise Exception(f"LLM API error: {response.status_code} - {response.text}")
+            if response.status_code == 401:
+                raise Exception("Invalid API key - please check your credentials")
+            elif response.status_code == 429:
+                raise Exception("Rate limit exceeded - please try again later")
+            elif response.status_code != 200:
+                # Don't log full response for security
+                raise Exception(f"LLM API error: {response.status_code}")
             
             result = response.json()
-            return result["choices"][0]["message"]["content"]
+            content = result["choices"][0]["message"]["content"]
+            
+            # Validate response content
+            if len(content) > 100000:  # Sanity check
+                logger.warning("Unusually long LLM response received")
+                content = content[:100000] + "\n[Response truncated for safety]"
+            
+            return content
             
         except Exception as e:
-            logger.error(f"LLM API call failed: {e}")
+            # Log error without exposing sensitive information
+            error_msg = str(e)
+            if "sk-" in error_msg:
+                error_msg = re.sub(r'sk-[a-zA-Z0-9]+', 'sk-****', error_msg)
+            
+            logger.error(f"LLM API call failed: {error_msg}")
             raise
     
     def _fallback_summary(self) -> Dict[str, Any]:
