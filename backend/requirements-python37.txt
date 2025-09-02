@@ -7,8 +7,8 @@ uvicorn[standard]>=0.13.0,<0.16.0
 python-multipart>=0.0.5
 pydantic>=1.8.0,<1.10.0
 
-# AI and ML libraries (older compatible versions)
-transformers>=4.5.0,<4.19.0
+# AI and ML libraries (maximum compatibility)
+transformers>=4.5.0,<=4.18.0
 torch>=1.7.0,<1.12.0
 sentence-transformers>=2.0.0,<2.2.0
 numpy>=1.19.0,<1.22.0
