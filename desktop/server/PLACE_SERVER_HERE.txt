@@ -1,0 +1,15 @@
+This directory should contain the backend server files when building the standalone executable.
+
+Copy the following files from the backend directory:
+- app.py
+- ingest.py
+- retriever.py
+- llm.py
+- chunking.py
+- utils/ (entire directory)
+- extractors/ (entire directory)
+- sources/ (entire directory)
+- requirements.txt
+- .env.sample
+
+The build script will automatically copy these files here.
