@@ -20,6 +20,7 @@ from ingest import DocumentIngestor
 from retriever import LegalRetriever
 from llm import LegalLLM
 from sources.indiacode import IndiaCodeDownloader
+from vlm_config import vlm_configurator, VLMQuality, get_vlm_configuration_info
 from security import (
     SecurityConfig, InputValidator, SecurityHeadersMiddleware, 
     FileSecurityValidator, SecureEnvironment
@@ -123,6 +124,29 @@ class JudgmentRequest(BaseModel):
     def validate_language(cls, v):
         if not InputValidator.validate_language_code(v):
             raise ValueError("Invalid language code")
+        return v
+
+class VLMConfigRequest(BaseModel):
+    preset: Optional[str] = Field(None, description="VLM quality preset: premium, high, balanced, fast, offline, basic")
+    custom_order: Optional[List[str]] = Field(None, description="Custom VLM model order")
+    
+    @field_validator('preset')
+    @classmethod
+    def validate_preset(cls, v):
+        if v is not None:
+            valid_presets = [quality.value for quality in VLMQuality]
+            if v not in valid_presets:
+                raise ValueError(f"Invalid preset. Must be one of: {', '.join(valid_presets)}")
+        return v
+    
+    @field_validator('custom_order')
+    @classmethod
+    def validate_custom_order(cls, v):
+        if v is not None:
+            valid_models = ["openai", "donut", "pix2struct", "tesseract_fallback"]
+            for model in v:
+                if model not in valid_models:
+                    raise ValueError(f"Invalid model '{model}'. Must be one of: {', '.join(valid_models)}")
         return v
 
 class QueryResponse(BaseModel):
@@ -368,6 +392,127 @@ async def generate_judgment(request: JudgmentRequest):
         
     except Exception as e:
         logger.error(f"Failed to generate judgment: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/vlm/config")
+async def get_vlm_configuration():
+    """Get current VLM configuration and available options"""
+    try:
+        config_info = get_vlm_configuration_info()
+        return {
+            "current_configuration": config_info,
+            "available_presets": {
+                quality.value: {
+                    "description": preset["description"],
+                    "cost": preset["cost"],
+                    "speed": preset["speed"],
+                    "accuracy": preset["accuracy"],
+                    "requirements": preset["requirements"]
+                }
+                for quality, preset in vlm_configurator.PRESETS.items()
+            },
+            "available_models": config_info["available_models"]
+        }
+    except Exception as e:
+        logger.error(f"Failed to get VLM configuration: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/vlm/config")
+async def set_vlm_configuration(request: VLMConfigRequest):
+    """Set VLM configuration using preset or custom order"""
+    try:
+        if request.preset and request.custom_order:
+            raise HTTPException(
+                status_code=400, 
+                detail="Cannot specify both preset and custom_order"
+            )
+        
+        if not request.preset and not request.custom_order:
+            raise HTTPException(
+                status_code=400, 
+                detail="Must specify either preset or custom_order"
+            )
+        
+        if request.preset:
+            # Set using preset
+            quality = VLMQuality(request.preset)
+            new_order = vlm_configurator.set_preset(quality)
+            config_type = f"preset ({request.preset})"
+        else:
+            # Set using custom order
+            new_order = vlm_configurator.set_custom_order(request.custom_order)
+            config_type = "custom"
+        
+        # Validate the new configuration
+        validation = vlm_configurator.validate_configuration(new_order)
+        warnings = []
+        for model, is_valid in validation.items():
+            if not is_valid:
+                warnings.append(f"Model '{model}' may not work properly (missing requirements)")
+        
+        return {
+            "status": "success",
+            "message": f"VLM configuration updated to {config_type}",
+            "new_order": new_order,
+            "validation": validation,
+            "warnings": warnings,
+            "note": "Restart the application for changes to take full effect"
+        }
+        
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Failed to set VLM configuration: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/vlm/recommendations")
+async def get_vlm_recommendations():
+    """Get VLM configuration recommendations based on current environment"""
+    try:
+        recommendations = vlm_configurator.get_recommendations()
+        available_models = vlm_configurator.get_available_models()
+        
+        # Check what's actually available
+        model_status = {}
+        for model_name, model_info in available_models.items():
+            if model_name == "openai":
+                model_status[model_name] = {
+                    "available": bool(os.getenv("OPENAI_API_KEY")),
+                    "reason": "OPENAI_API_KEY configured" if os.getenv("OPENAI_API_KEY") else "Missing OPENAI_API_KEY"
+                }
+            elif model_name == "tesseract_fallback":
+                model_status[model_name] = {
+                    "available": True,  # Usually available
+                    "reason": "OCR fallback (usually works)"
+                }
+            elif model_name in ["donut", "pix2struct"]:
+                try:
+                    import torch
+                    import transformers
+                    has_gpu = torch.cuda.is_available()
+                    model_status[model_name] = {
+                        "available": True,
+                        "reason": f"Transformers available, GPU: {'Yes' if has_gpu else 'No (CPU only)'}"
+                    }
+                except ImportError:
+                    model_status[model_name] = {
+                        "available": False,
+                        "reason": "Missing transformers or torch"
+                    }
+        
+        return {
+            "recommendations": recommendations,
+            "model_status": model_status,
+            "suggested_configs": {
+                "best_quality": "openai,donut,pix2struct,tesseract_fallback",
+                "no_api_needed": "donut,pix2struct,tesseract_fallback",
+                "fastest": "tesseract_fallback,openai",
+                "api_only": "openai,tesseract_fallback"
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to get VLM recommendations: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":

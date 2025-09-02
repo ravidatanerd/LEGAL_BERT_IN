@@ -18,6 +18,7 @@ from utils.pdf_images import render_pdf_pages
 from utils.textnorm import normalize_text
 from utils.parallel import run_parallel_extraction
 from extractors.base import BaseExtractor
+from vlm_config import get_vlm_order_from_env, get_vlm_configuration_info
 from extractors.donut import DonutExtractor
 from extractors.pix2struct import Pix2StructExtractor
 from extractors.openai_vision import OpenAIVisionExtractor
@@ -36,10 +37,24 @@ class DocumentIngestor:
         self.retriever = None  # Will be set after initialization
         
     def _initialize_extractors(self) -> Dict[str, BaseExtractor]:
-        """Initialize VLM extractors based on configuration"""
+        """Initialize VLM extractors based on advanced configuration"""
         extractors = {}
-        vlm_order = os.getenv("VLM_ORDER", "donut,pix2struct,openai,tesseract_fallback").split(",")
         
+        # Get VLM order using advanced configuration system
+        vlm_order = get_vlm_order_from_env()
+        
+        # Log configuration info
+        config_info = get_vlm_configuration_info()
+        logger.info(f"VLM Configuration: {config_info['configuration']['type']}")
+        logger.info(f"VLM Order: {' → '.join(vlm_order)}")
+        
+        # Validate configuration
+        validation = config_info['validation']
+        for model, is_valid in validation.items():
+            if model in vlm_order and not is_valid:
+                logger.warning(f"VLM model '{model}' in order but not properly configured")
+        
+        # Initialize extractors in order
         for extractor_name in vlm_order:
             extractor_name = extractor_name.strip()
             try:
@@ -50,16 +65,29 @@ class DocumentIngestor:
                 elif extractor_name == "openai":
                     if os.getenv("OPENAI_API_KEY"):
                         extractors["openai"] = OpenAIVisionExtractor()
+                    else:
+                        logger.warning("OpenAI extractor requested but OPENAI_API_KEY not set")
+                        continue
                 elif extractor_name == "tesseract_fallback":
-                    if os.getenv("ENABLE_OCR_FALLBACK", "false").lower() == "true":
+                    if os.getenv("ENABLE_OCR_FALLBACK", "true").lower() == "true":
                         extractors["tesseract_fallback"] = TesseractExtractor()
+                    else:
+                        logger.warning("Tesseract fallback requested but ENABLE_OCR_FALLBACK not enabled")
+                        continue
                         
-                logger.info(f"Initialized {extractor_name} extractor")
+                logger.info(f"✅ Initialized {extractor_name} extractor")
             except Exception as e:
-                logger.warning(f"Failed to initialize {extractor_name}: {e}")
+                logger.warning(f"❌ Failed to initialize {extractor_name}: {e}")
         
         if not extractors:
-            raise RuntimeError("No extractors could be initialized")
+            logger.error("No VLM extractors successfully initialized!")
+            # Fallback to basic OCR
+            try:
+                extractors["tesseract_fallback"] = TesseractExtractor()
+                logger.info("✅ Fallback to Tesseract OCR")
+            except Exception as e:
+                logger.error(f"❌ Even Tesseract fallback failed: {e}")
+                raise RuntimeError("No extractors could be initialized")
             
         return extractors
     
