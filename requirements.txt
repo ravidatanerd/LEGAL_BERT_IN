@@ -1,0 +1,49 @@
+# Core FastAPI backend
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+pydantic==2.5.0
+python-multipart==0.0.6
+
+# PDF processing and vision
+PyMuPDF==1.23.8
+Pillow==10.1.0
+opencv-python==4.8.1.78
+
+# Vision-Language Models
+transformers==4.36.0
+torch==2.1.1
+torchvision==0.16.1
+accelerate==0.25.0
+
+# Donut and Pix2Struct
+donut-python==1.0.7
+pix2struct==0.0.1
+
+# OpenAI integration
+openai==1.3.7
+
+# OCR fallback
+pytesseract==0.3.10
+
+# Embeddings and retrieval
+sentence-transformers==2.2.2
+faiss-cpu==1.7.4
+rank-bm25==0.2.2
+
+# Text processing
+unidecode==1.3.7
+regex==2023.10.3
+
+# Web scraping
+playwright==1.40.0
+requests==2.31.0
+aiohttp==3.9.1
+
+# Database and storage
+sqlite3
+aiofiles==23.2.1
+
+# Utilities
+python-dotenv==1.0.0
+loguru==0.7.2
+tqdm==4.66.1

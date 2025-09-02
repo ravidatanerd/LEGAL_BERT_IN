@@ -1,0 +1,31 @@
+This directory is intended to contain the backend server files when building the standalone executable.
+
+When using PyInstaller to build the desktop application, the backend server files (app.py, ingest.py, retriever.py, etc.) should be placed in this directory so they can be bundled with the executable.
+
+For development, you can create symbolic links or copy the backend files here:
+
+```bash
+# Create symbolic links (Linux/macOS)
+ln -s ../../app.py app.py
+ln -s ../../ingest.py ingest.py
+ln -s ../../retriever.py retriever.py
+ln -s ../../llm.py llm.py
+ln -s ../../chunking.py chunking.py
+ln -s ../../requirements.txt requirements.txt
+ln -s ../../utils utils
+ln -s ../../extractors extractors
+ln -s ../../sources sources
+
+# Or copy files (Windows)
+copy ..\..\app.py app.py
+copy ..\..\ingest.py ingest.py
+copy ..\..\retriever.py retriever.py
+copy ..\..\llm.py llm.py
+copy ..\..\chunking.py chunking.py
+copy ..\..\requirements.txt requirements.txt
+xcopy ..\..\utils utils /E /I
+xcopy ..\..\extractors extractors /E /I
+xcopy ..\..\sources sources /E /I
+```
+
+The build script (installer/build_installer.ps1) will automatically handle this when building the installer.

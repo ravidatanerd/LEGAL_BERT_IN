@@ -1,0 +1,9 @@
+# Desktop GUI requirements
+PySide6==6.6.1
+requests==2.31.0
+python-dotenv==1.0.0
+markdown==3.5.1
+pygments==2.17.2
+
+# For building standalone executable
+pyinstaller==6.2.0
