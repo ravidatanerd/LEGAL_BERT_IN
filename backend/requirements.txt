@@ -1,32 +1,41 @@
-# InLegalDesk Backend - Pre-compiled Wheels for Windows Python 3.6+
-# Avoids compilation issues by using specific versions with reliable wheels
+# InLegalDesk Backend - Fixed for Windows Python 3.6+ Compilation Issues
+# Based on testing - avoids opencv-python and tokenizers compilation errors
 
-# Essential: Install wheel support first
+# Essential: Install wheel support first (prevents legacy setup.py installs)
 wheel>=0.36.0
 setuptools>=40.0.0
 
-# Core FastAPI stack (Python 3.6+ compatible)
-fastapi>=0.65.0,<0.75.0
-uvicorn[standard]>=0.13.0,<0.16.0
-python-multipart>=0.0.5,<0.0.6
-pydantic>=1.8.0,<1.9.0
+# Core FastAPI stack (compatible versions)
+fastapi>=0.65.0,<0.80.0
+uvicorn[standard]>=0.13.0,<0.18.0
+python-multipart>=0.0.5
+pydantic>=1.8.0,<2.0.0
 
-# Essential math library (Python 3.6 compatible)
-numpy>=1.19.0,<1.20.0
+# Essential math library (flexible for different Python versions)
+numpy>=1.19.0
 
-# AI libraries (specific versions with wheels for Python 3.6)
-# Note: torch CPU version will be installed separately via script
-torch>=1.7.0,<1.11.0
-transformers==4.12.5
-sentence-transformers==2.1.0
+# AI libraries (FIXED - specific versions to avoid tokenizers compilation)
+# Use specific torch and transformers versions with known wheel availability
+torch>=1.7.0,<1.13.0
+transformers>=4.20.0,<4.30.0
+regex>=2020.1.8
+requests>=2.20.0
+tqdm>=4.27
+pyyaml>=5.1
+huggingface-hub>=0.8.0
+filelock>=3.0.0
+packaging>=20.0
 
-# Document processing (specific wheel versions)
-PyMuPDF==1.19.6
-Pillow>=8.0.0,<9.0.0
-pytesseract>=0.3.7,<0.4.0
+# Sentence transformers (compatible version)
+sentence-transformers>=2.1.0
 
-# Computer vision (headless version - no GUI dependencies, more reliable wheels)
-opencv-python-headless==4.5.5.64
+# Document processing (FIXED - use compatible PyMuPDF version)
+PyMuPDF>=1.16.0,<=1.19.6
+Pillow>=8.0.0
+pytesseract>=0.3.7
+
+# Computer vision (FIXED - use headless version to avoid compilation)
+opencv-python-headless>=4.5.0
 
 # Text processing
 rank-bm25>=0.2.0

@@ -56,13 +56,19 @@ if errorlevel 1 (
     pip install "torch>=1.7.0,<1.11.0" "torchvision>=0.8.0,<0.12.0"
 )
 
-echo 🔤 Step 5: Installing Transformers (specific version with wheels)...
-pip install transformers==4.12.5
+echo 🔤 Step 5: Installing Transformers (FIXED approach for tokenizers)...
+REM Install transformers dependencies first to avoid tokenizers compilation
+pip install regex tqdm requests packaging filelock pyyaml huggingface-hub
+
+REM Try newer transformers that should have pre-compiled tokenizers
+pip install "transformers>=4.20.0,<4.30.0"
 
 if errorlevel 1 (
-    echo ⚠️  Transformers 4.12.5 failed, trying without tokenizers dependency...
-    pip install transformers==4.12.5 --no-deps
-    pip install regex tqdm requests packaging filelock
+    echo ⚠️  Modern transformers failed, trying alternative approach...
+    echo Installing transformers without tokenizers dependency...
+    pip install transformers --no-deps
+    pip install regex tqdm requests packaging filelock pyyaml huggingface-hub
+    echo ⚠️  Tokenizers may be limited, but basic functionality will work
 )
 
 echo 📄 Step 6: Installing PyMuPDF (specific wheel version)...
