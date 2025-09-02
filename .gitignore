@@ -1,0 +1,178 @@
+# InLegalDesk - Secure Git Repository Configuration
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environments
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+.venv/
+
+# Environment Variables (CRITICAL - Never commit credentials)
+.env
+.env.local
+.env.production
+.env.staging
+*.env
+
+# API Keys and Secrets (CRITICAL SECURITY)
+*api_key*
+*secret*
+*password*
+*token*
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+
+# Model Files (Too large for Git)
+*.bin
+*.safetensors
+*.h5
+*.onnx
+models/
+checkpoints/
+*.model
+
+# Data Directories
+data/
+logs/
+temp/
+cache/
+embeddings/
+documents/
+uploads/
+downloads/
+
+# IDE and Editor Files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# PyInstaller
+*.manifest
+*.spec
+build/
+dist/
+
+# Installer Build Artifacts
+installer/build/
+installer/dist/
+installer/output/
+*.exe
+*.msi
+*.dmg
+*.pkg
+
+# Temporary Files
+*.tmp
+*.temp
+*.log
+*.pid
+
+# OS Generated Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Jupyter Notebooks (if any)
+.ipynb_checkpoints/
+*.ipynb
+
+# Test Coverage
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+
+# Database Files
+*.db
+*.sqlite
+*.sqlite3
+
+# Backup Files
+*.bak
+*.backup
+*.old
+
+# Sensitive Configuration
+config.ini
+config.json
+settings.json
+credentials.json
+secrets.yaml
+
+# Large Media Files
+*.mp4
+*.avi
+*.mov
+*.wmv
+*.pdf
+*.doc
+*.docx
+*.ppt
+*.pptx
+
+# Node.js (if any frontend)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+*~
+
+# Security: Never commit these patterns
+sk-*
+*_key_*
+*_secret_*
+*_token_*
+*password*
+*credential*
