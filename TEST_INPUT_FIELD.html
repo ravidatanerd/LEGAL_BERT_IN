@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Input Field</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            max-width: 600px; 
+            margin: 50px auto; 
+            padding: 20px; 
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        .input-area {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        textarea {
+            flex: 1;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            resize: vertical;
+            min-height: 40px;
+        }
+        textarea:focus {
+            border-color: #007acc;
+            outline: none;
+        }
+        button {
+            background: #007acc;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        button:hover {
+            background: #005fa3;
+        }
+        .output {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #007acc;
+        }
+        .test-results {
+            margin-top: 20px;
+            padding: 15px;
+            background: #e8f5e8;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Input Field Test</h1>
+        <p>This tests if the input field works properly in your browser.</p>
+        
+        <div class="test-results" id="test-results">
+            <h3>📊 Test Results:</h3>
+            <div id="results-content">Running tests...</div>
+        </div>
+        
+        <h3>💬 Test the Input Field:</h3>
+        <p>Type a legal question below and click Send or press Enter:</p>
+        
+        <div class="input-area">
+            <textarea 
+                id="test-input" 
+                placeholder="Type here... (e.g., 'What is Section 302 IPC?')"
+                rows="2"
+            ></textarea>
+            <button onclick="testSend()">Send</button>
+        </div>
+        
+        <div class="output" id="output" style="display: none;">
+            <h4>📤 Your Input:</h4>
+            <div id="user-message"></div>
+            
+            <h4>🤖 Response:</h4>
+            <div id="ai-response"></div>
+        </div>
+    </div>
+    
+    <script>
+        console.log('🧪 Input field test script loaded');
+        
+        // Run tests
+        function runTests() {
+            const results = [];
+            
+            // Test 1: Check if input element exists
+            const input = document.getElementById('test-input');
+            if (input) {
+                results.push('✅ Input element found');
+            } else {
+                results.push('❌ Input element not found');
+            }
+            
+            // Test 2: Check if input is focusable
+            try {
+                input.focus();
+                results.push('✅ Input can be focused');
+            } catch (e) {
+                results.push('❌ Input focus failed: ' + e.message);
+            }
+            
+            // Test 3: Check if we can set value
+            try {
+                input.value = 'Test value';
+                if (input.value === 'Test value') {
+                    results.push('✅ Input value can be set');
+                    input.value = ''; // Clear
+                } else {
+                    results.push('❌ Input value setting failed');
+                }
+            } catch (e) {
+                results.push('❌ Input value error: ' + e.message);
+            }
+            
+            // Test 4: Check event listeners
+            try {
+                input.addEventListener('input', function() {
+                    console.log('Input event working');
+                });
+                results.push('✅ Event listeners can be added');
+            } catch (e) {
+                results.push('❌ Event listener error: ' + e.message);
+            }
+            
+            // Test 5: Check send button
+            const sendBtn = document.getElementById('send-button');
+            if (sendBtn) {
+                results.push('✅ Send button found');
+            } else {
+                results.push('❌ Send button not found');
+            }
+            
+            // Display results
+            document.getElementById('results-content').innerHTML = results.join('<br>');
+            
+            if (results.every(r => r.startsWith('✅'))) {
+                document.getElementById('results-content').innerHTML += '<br><br><strong>🎉 All tests passed! Input field should work.</strong>';
+            } else {
+                document.getElementById('results-content').innerHTML += '<br><br><strong>⚠️ Some tests failed. Check browser console for errors.</strong>';
+            }
+        }
+        
+        function testSend() {
+            const input = document.getElementById('test-input');
+            const question = input.value.trim();
+            
+            console.log('Test send called with:', question);
+            
+            if (!question) {
+                alert('Please type something first!');
+                return;
+            }
+            
+            // Show output
+            document.getElementById('user-message').textContent = question;
+            document.getElementById('ai-response').innerHTML = `
+                <strong>✅ Input field is working!</strong><br><br>
+                You typed: "${question}"<br><br>
+                This confirms the input field accepts text and the send function works.<br><br>
+                <strong>Next step:</strong> The main InLegalDesk interface should also work properly.
+            `;
+            document.getElementById('output').style.display = 'block';
+            
+            // Clear input
+            input.value = '';
+            
+            console.log('✅ Test send completed successfully');
+        }
+        
+        // Handle Enter key
+        document.getElementById('test-input').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                testSend();
+            }
+        });
+        
+        // Run tests when page loads
+        document.addEventListener('DOMContentLoaded', runTests);
+        
+        console.log('✅ Test script setup complete');
+    </script>
+</body>
+</html>
