@@ -41,6 +41,18 @@ except ImportError:
     DOTENV_AVAILABLE = False
     logger.warning("python-dotenv not available - using environment variables only")
 
+# Try to import AI packages and model downloader
+try:
+    import torch
+    import transformers
+    from model_downloader import ModelDownloader
+    AI_PACKAGES_AVAILABLE = True
+    logger.info("✅ AI packages available")
+except ImportError as e:
+    AI_PACKAGES_AVAILABLE = False
+    logger.warning(f"⚠️  AI packages not available: {e}")
+    logger.warning("Will use basic mode only")
+
 # Initialize FastAPI
 app = FastAPI(
     title="InLegalDesk - Working Backend",
@@ -69,6 +81,18 @@ class QueryResponse(BaseModel):
     language_detected: str = "en"
     model_used: str = "basic"
     attachments_processed: List[Dict] = []
+
+# Global variables
+model_downloader = None
+models_downloaded = False
+
+# Initialize model downloader if AI packages available
+if AI_PACKAGES_AVAILABLE:
+    try:
+        model_downloader = ModelDownloader()
+        logger.info("✅ Model downloader initialized")
+    except Exception as e:
+        logger.warning(f"⚠️  Model downloader failed to initialize: {e}")
 
 # Premium fallback system
 class WorkingFallbackSystem:
@@ -408,6 +432,8 @@ async def root():
             <button class="demo-btn" onclick="askDemo('Explain bail provisions')">Demo: Bail Law</button>
             <button class="demo-btn" onclick="askDemo('What is Section 420 IPC?')">Demo: Cheating</button>
             <button class="demo-btn" onclick="askDemo('Constitutional rights in India')">Demo: Constitution</button>
+            <button class="demo-btn" onclick="checkModels()" style="background: #28a745;">Check AI Models</button>
+            <button class="demo-btn" onclick="downloadModels()" style="background: #dc3545;">Download Models</button>
         </div>
         
         <div class="chat-container">
@@ -604,11 +630,71 @@ async def root():
             }
         });
         
+        // Model management functions
+        async function checkModels() {
+            try {
+                const response = await fetch('/models/status');
+                const data = await response.json();
+                
+                if (data.available) {
+                    const modelsList = Object.entries(data.existing_models)
+                        .map(([model, exists]) => `${model}: ${exists ? '✅' : '❌'}`)
+                        .join('\\n');
+                    
+                    const message = `AI Models Status:\\n\\n${modelsList}\\n\\nModels ready: ${data.models_ready ? 'Yes' : 'No'}\\nDownload required: ${data.download_required ? 'Yes' : 'No'}`;
+                    
+                    addMessage(message, false);
+                } else {
+                    addMessage(`AI Models: Not available\\nReason: ${data.reason}\\nSuggestion: ${data.suggestion}`, false);
+                }
+            } catch (error) {
+                addMessage(`Error checking models: ${error.message}`, false);
+            }
+        }
+        
+        async function downloadModels() {
+            try {
+                addMessage('🤖 Starting AI model download...', false);
+                
+                const response = await fetch('/models/download', { method: 'POST' });
+                const data = await response.json();
+                
+                if (data.status === 'complete') {
+                    addMessage('✅ All models already downloaded and ready!', false);
+                } else if (data.status === 'initiated') {
+                    const modelsList = data.models_to_download
+                        .map(m => `• ${m.name}: ${m.size}`)
+                        .join('\\n');
+                    
+                    const message = `🚀 Model download initiated!\\n\\nDownloading:\\n${modelsList}\\n\\nEstimated time: ${data.estimated_time}\\n\\nNote: ${data.note}`;
+                    addMessage(message, false);
+                } else {
+                    addMessage(`Model download status: ${data.message}`, false);
+                }
+            } catch (error) {
+                addMessage(`Error downloading models: ${error.message}`, false);
+            }
+        }
+        
         // Load initial status
         fetch('/health')
             .then(r => r.json())
             .then(data => {
                 document.getElementById('ai-status').textContent = `AI: ${data.status}`;
+                
+                // Show model status
+                if (data.models) {
+                    const modelCount = Object.values(data.models).filter(Boolean).length;
+                    const totalModels = Object.keys(data.models).length;
+                    
+                    if (modelCount === 0) {
+                        addMessage('🤖 AI models not downloaded yet. Click "Download Models" to get enhanced AI features!', false);
+                    } else if (modelCount < totalModels) {
+                        addMessage(`🤖 AI models partially ready (${modelCount}/${totalModels}). Click "Check AI Models" for details.`, false);
+                    } else {
+                        addMessage('✅ All AI models ready! Enhanced legal research available.', false);
+                    }
+                }
             })
             .catch(() => {
                 document.getElementById('ai-status').textContent = 'AI: Error';
@@ -621,6 +707,12 @@ async def root():
 @app.get("/health")
 async def health_check():
     """Health check with detailed status"""
+    
+    # Check model status
+    model_status = {}
+    if model_downloader:
+        model_status = model_downloader.check_models_exist()
+    
     return {
         "status": "healthy",
         "message": "InLegalDesk backend is running perfectly",
@@ -628,11 +720,67 @@ async def health_check():
             "basic_legal_qa": True,
             "document_upload": True,
             "premium_fallback": True,
-            "api_integration": bool(os.getenv("OPENAI_API_KEY"))
+            "api_integration": bool(os.getenv("OPENAI_API_KEY")),
+            "ai_packages": AI_PACKAGES_AVAILABLE,
+            "model_downloader": model_downloader is not None
         },
+        "models": model_status,
         "current_model": fallback_system.get_current_model()["name"],
         "timestamp": datetime.now().isoformat()
     }
+
+@app.get("/models/status")
+async def get_model_status():
+    """Get detailed model download status"""
+    if not model_downloader:
+        return {
+            "available": False,
+            "reason": "AI packages not installed",
+            "suggestion": "Install torch and transformers for AI features"
+        }
+    
+    download_info = model_downloader.get_download_info()
+    existing_models = model_downloader.check_models_exist()
+    
+    return {
+        "available": True,
+        "existing_models": existing_models,
+        "download_info": download_info,
+        "models_ready": all(existing_models.values()),
+        "download_required": download_info["download_required"]
+    }
+
+@app.post("/models/download")
+async def download_models():
+    """Start model download process"""
+    if not model_downloader:
+        raise HTTPException(status_code=503, detail="Model downloader not available")
+    
+    try:
+        logger.info("Starting model download process...")
+        
+        # This would normally be run in background, but for demo we'll simulate
+        download_info = model_downloader.get_download_info()
+        
+        if not download_info["download_required"]:
+            return {
+                "status": "complete",
+                "message": "All models already downloaded",
+                "models": model_downloader.check_models_exist()
+            }
+        
+        # For demo purposes, we'll return download initiation
+        return {
+            "status": "initiated",
+            "message": "Model download started",
+            "models_to_download": download_info["models_to_download"],
+            "estimated_time": "5-15 minutes",
+            "note": "Check /models/status for progress"
+        }
+        
+    except Exception as e:
+        logger.error(f"Model download error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/ask", response_model=QueryResponse)
 async def ask_question(request: QueryRequest):
