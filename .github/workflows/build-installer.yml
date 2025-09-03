@@ -206,9 +206,15 @@ Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#MyAppName}}
 Filename: "python"; Parameters: "{app}\dependency_installer.py"; Description: "Install Python dependencies"; Flags: nowait postinstall skipifsilent
 "@ | Out-File -FilePath installer\InLegalDesk.iss -Encoding UTF8
 
-    - name: Create launcher executable
+    - name: Build launcher executables
       run: |
-        # Create Python launcher script
+        # Build debug console launcher (shows errors, doesn't close)
+        pyinstaller --onefile --console --name InLegalDesk-Debug InLegalDesk_Debug_Launcher.py
+        
+        # Build console launcher (simple version)
+        pyinstaller --onefile --console --name InLegalDesk-Console InLegalDesk_Console.py
+        
+        # Create Python launcher script for GUI version
         @"
 import sys
 import os
@@ -302,6 +308,15 @@ if __name__ == "__main__":
         Copy-Item CHECK_BEFORE_INSTALL.bat release-assets\
         Copy-Item UPGRADE_PIP_FIRST.bat release-assets\
         Copy-Item check_python_compatibility.py release-assets\
+        
+        # Copy diagnostic tools
+        Copy-Item InLegalDesk_Debug_Launcher.py release-assets\
+        Copy-Item InLegalDesk_Console.py release-assets\
+        Copy-Item DIAGNOSE_EXE_ISSUE.bat release-assets\
+        
+        # Copy built executables
+        Copy-Item dist\InLegalDesk-Debug.exe release-assets\ -ErrorAction SilentlyContinue
+        Copy-Item dist\InLegalDesk-Console.exe release-assets\ -ErrorAction SilentlyContinue
         
         # Create README for release
         @"
@@ -401,9 +416,13 @@ After installation:
       with:
         files: |
           release-assets/InLegalDesk-Setup.exe
+          release-assets/InLegalDesk-Debug.exe
+          release-assets/InLegalDesk-Console.exe
           release-assets/ULTIMATE_AI_FIX.bat
           release-assets/AUTO_PYTHON_UPGRADE.bat
           release-assets/CHECK_BEFORE_INSTALL.bat
+          release-assets/DIAGNOSE_EXE_ISSUE.bat
+          release-assets/InLegalDesk_Debug_Launcher.py
           release-assets/README.txt
         name: InLegalDesk Windows Installer v${{ github.ref_name }}
         body: |
