@@ -22,6 +22,7 @@ from llm import LegalLLM
 from sources.indiacode import IndiaCodeDownloader
 from vlm_config import vlm_configurator, VLMQuality, get_vlm_configuration_info
 from ai_adaptive import adaptive_ai, get_ai_status, get_ai_capability_level, estimate_success_rates
+from smart_ai_fallback import get_ai_tier_status, test_all_ai_tiers
 from security import (
     SecurityConfig, InputValidator, SecurityHeadersMiddleware, 
     FileSecurityValidator, SecureEnvironment
@@ -550,6 +551,31 @@ async def get_ai_status():
         
     except Exception as e:
         logger.error(f"Failed to get AI status: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/ai/tiers")
+async def get_ai_tier_status_endpoint():
+    """Get AI tier status and rate limit information"""
+    try:
+        tier_status = get_ai_tier_status()
+        tier_tests = await test_all_ai_tiers()
+        
+        return {
+            "tier_status": tier_status,
+            "tier_tests": tier_tests,
+            "rate_limit_guidance": {
+                "premium_rate_limited": "premium" in tier_status.get("rate_limited_tiers", []),
+                "fallback_available": tier_status.get("fallback_enabled", True),
+                "recommendations": [
+                    "Wait for rate limits to reset (15-60 minutes)",
+                    "Add credits to OpenAI account",
+                    "Use VLM_PRESET=offline for no API calls",
+                    "Configure conservative rate limits"
+                ]
+            }
+        }
+    except Exception as e:
+        logger.error(f"Failed to get AI tier status: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/", response_class=HTMLResponse)

@@ -11,6 +11,7 @@ import asyncio
 
 from utils.textnorm import is_devanagari_text
 from hybrid_legal_ai import HybridLegalAI, create_hybrid_legal_ai
+from smart_ai_fallback import get_ai_response_with_fallback, get_ai_tier_status
 
 logger = logging.getLogger(__name__)
 
@@ -84,23 +85,39 @@ class LegalLLM:
                     "enhanced_citations": hybrid_result.citations
                 }
             
-            # Fallback to basic LLM if hybrid not available
-            elif self.client:
-                logger.info("Using basic LLM mode")
-                detected_lang = self._detect_language(question, language)
+            # Use smart fallback system for rate limit handling
+            else:
+                logger.info("Using smart AI fallback system with rate limit handling")
+                
+                # Prepare context from sources
                 context = self._prepare_context(sources)
-                prompt = self._create_qa_prompt(question, context, detected_lang)
-                response = await self._call_llm(prompt)
+                
+                # Use smart fallback system
+                fallback_response = await get_ai_response_with_fallback(question, context)
+                
+                # Add tier information to response
+                tier_info = get_ai_tier_status()
+                
+                # Format response based on tier used
+                if fallback_response.get("tier") in ["premium", "standard", "free"]:
+                    response_text = fallback_response["answer"]
+                    if sources:
+                        response_text += "\n\n**Sources:**\n"
+                        for i, source in enumerate(sources[:3], 1):
+                            response_text += f"[{i}] {source.get('filename', 'Unknown')} (Score: {source.get('combined_score', 0):.2f})\n"
+                else:
+                    # Local or fallback tier
+                    response_text = fallback_response["answer"]
+                    if fallback_response.get("tier") == "rate_limited_fallback":
+                        response_text += f"\n\n**Note**: Using {fallback_response.get('tier', 'fallback')} mode due to API rate limits. Premium ChatGPT will be available again shortly."
                 
                 return {
-                    "text": response,
-                    "language_detected": detected_lang
-                }
-            
-            else:
-                return {
-                    "text": "AI system not available. Please configure OpenAI API key or enable hybrid mode.",
-                    "language_detected": "en"
+                    "text": response_text,
+                    "language_detected": self._detect_language(question, language),
+                    "ai_tier_used": fallback_response.get("tier", "unknown"),
+                    "model_used": fallback_response.get("model_used", "unknown"),
+                    "quality_level": fallback_response.get("quality_level", "basic"),
+                    "rate_limit_info": tier_info.get("rate_limited_tiers", [])
                 }
             
         except Exception as e:
