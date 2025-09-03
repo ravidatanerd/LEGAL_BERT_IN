@@ -180,23 +180,28 @@ class DesktopSecurityValidator:
                 result["errors"].append("API key cannot be empty")
                 return result
             
-            # Check basic format
-            if not api_key.startswith('sk-'):
-                result["errors"].append("OpenAI API keys must start with 'sk-'")
+            # Check basic format - Updated for latest OpenAI API key formats
+            # Modern OpenAI API keys can start with different prefixes
+            valid_prefixes = ['sk-', 'sk-proj-', 'sk-svcacct-']
+            has_valid_prefix = any(api_key.startswith(prefix) for prefix in valid_prefixes)
+            
+            if not has_valid_prefix:
+                result["errors"].append("OpenAI API keys must start with 'sk-', 'sk-proj-', or 'sk-svcacct-'")
                 return result
             
-            # Check length
+            # Check length - Updated for modern key lengths
             if len(api_key) < 20:
                 result["errors"].append("API key too short")
                 return result
             
-            if len(api_key) > 200:
+            if len(api_key) > 300:  # Increased limit for modern keys
                 result["errors"].append("API key too long")
                 return result
             
-            # Check for invalid characters
-            if not re.match(r'^sk-[a-zA-Z0-9]+$', api_key):
-                result["errors"].append("API key contains invalid characters")
+            # Check for invalid characters - Updated for modern key formats
+            # Modern keys can include: letters, numbers, hyphens, underscores
+            if not re.match(r'^sk-[a-zA-Z0-9_-]+$', api_key):
+                result["errors"].append("API key contains invalid characters (only letters, numbers, hyphens, underscores allowed)")
                 return result
             
             # Create masked version

@@ -117,16 +117,30 @@ class InputValidator:
     
     @staticmethod
     def validate_api_key(api_key: str) -> bool:
-        """Validate OpenAI API key format"""
+        """Validate OpenAI API key format - Updated for latest ChatGPT tokens"""
         if not api_key:
             return False
         
-        # Basic format validation
-        if not api_key.startswith('sk-') or len(api_key) < 20:
+        # Updated format validation for modern OpenAI API keys
+        # Support multiple key formats: sk-, sk-proj-, sk-svcacct-
+        valid_prefixes = ['sk-', 'sk-proj-', 'sk-svcacct-']
+        has_valid_prefix = any(api_key.startswith(prefix) for prefix in valid_prefixes)
+        
+        if not has_valid_prefix:
             return False
         
-        # Check for suspicious patterns
-        if any(char in api_key for char in [' ', '\n', '\t', '<', '>', '"', "'"]):
+        # Updated length validation for modern keys
+        if len(api_key) < 20 or len(api_key) > 300:
+            return False
+        
+        # Check for suspicious patterns (but allow valid characters)
+        # Modern keys can contain: letters, numbers, hyphens, underscores
+        if any(char in api_key for char in [' ', '\n', '\t', '<', '>', '"', "'", '\\', '/', '?', '&', '=', '+', '%', '@', '!', '#', '$', '^', '*', '(', ')', '[', ']', '{', '}', '|', ';', ':', ',', '.', '`', '~']):
+            return False
+        
+        # Validate character set - allow letters, numbers, hyphens, underscores
+        import re
+        if not re.match(r'^sk-[a-zA-Z0-9_-]+$', api_key):
             return False
         
         return True
