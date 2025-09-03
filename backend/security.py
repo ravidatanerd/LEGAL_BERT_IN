@@ -139,8 +139,9 @@ class InputValidator:
             return False
         
         # Validate character set - allow letters, numbers, hyphens, underscores
+        # Updated pattern to support sk-proj- and sk-svcacct- prefixes
         import re
-        if not re.match(r'^sk-[a-zA-Z0-9_-]+$', api_key):
+        if not re.match(r'^sk-(?:proj-|svcacct-)?[a-zA-Z0-9_-]+$', api_key):
             return False
         
         return True

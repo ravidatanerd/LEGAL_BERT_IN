@@ -200,7 +200,8 @@ class DesktopSecurityValidator:
             
             # Check for invalid characters - Updated for modern key formats
             # Modern keys can include: letters, numbers, hyphens, underscores
-            if not re.match(r'^sk-[a-zA-Z0-9_-]+$', api_key):
+            # Updated pattern to support sk-proj- and sk-svcacct- prefixes
+            if not re.match(r'^sk-(?:proj-|svcacct-)?[a-zA-Z0-9_-]+$', api_key):
                 result["errors"].append("API key contains invalid characters (only letters, numbers, hyphens, underscores allowed)")
                 return result
             
