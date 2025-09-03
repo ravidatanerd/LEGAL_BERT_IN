@@ -98,6 +98,45 @@ echo   🤖 AI model download (automatic on first run)
 echo.
 
 echo Starting backend...
+echo Current directory: %CD%
+echo.
+
+REM Make sure we're in the right directory
+if not exist startup_with_models.py (
+    echo ❌ startup_with_models.py not found in current directory
+    echo 📂 Current directory: %CD%
+    echo 🔧 Looking for the file...
+    
+    if exist ..\working_backend\startup_with_models.py (
+        echo ✅ Found in parent\working_backend
+        cd ..\working_backend
+    ) else if exist working_backend\startup_with_models.py (
+        echo ✅ Found in working_backend subdirectory
+        REM Already in working_backend
+    ) else (
+        echo ❌ startup_with_models.py not found anywhere!
+        echo.
+        echo 🔧 Creating simple startup script...
+        
+        echo import sys, os > simple_startup.py
+        echo sys.path.insert(0, '.') >> simple_startup.py
+        echo try: >> simple_startup.py
+        echo     print('Starting InLegalDesk backend...') >> simple_startup.py
+        echo     from simple_app import app >> simple_startup.py
+        echo     import uvicorn >> simple_startup.py
+        echo     print('Backend starting on http://localhost:8877') >> simple_startup.py
+        echo     uvicorn.run(app, host='0.0.0.0', port=8877) >> simple_startup.py
+        echo except Exception as e: >> simple_startup.py
+        echo     print(f'Error: {e}') >> simple_startup.py
+        echo     input('Press Enter to exit...') >> simple_startup.py
+        
+        echo ✅ Created simple_startup.py
+        python simple_startup.py
+        goto :end
+    )
+)
+
+echo ✅ Found startup script, launching...
 python startup_with_models.py
 
 echo.
