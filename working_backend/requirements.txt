@@ -1,0 +1,28 @@
+# InLegalDesk Working Backend - Minimal Requirements
+# Guaranteed to work with any Python 3.6+
+
+# Core web framework (essential)
+fastapi>=0.65.0
+uvicorn[standard]>=0.13.0
+pydantic>=1.8.0
+
+# Environment and HTTP (essential)
+python-dotenv>=0.15.0
+requests>=2.25.0
+
+# Optional but recommended
+httpx>=0.20.0
+aiofiles>=0.6.0
+python-multipart>=0.0.5
+
+# AI packages (optional - app works without these)
+# torch>=1.7.0
+# transformers>=4.12.0
+# numpy>=1.19.0
+
+# Document processing (optional)
+# PyMuPDF>=1.16.0
+# Pillow>=8.0.0
+
+# Desktop GUI (optional)
+# PySide6>=6.2.0
